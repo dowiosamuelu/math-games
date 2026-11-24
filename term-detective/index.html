@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="zh-Hant"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>名詞偵探</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Huninn&family=LXGW+WenKai+TC:wght@400;700&display=swap">
+<style>
+/* VOICE: 同一個放大鏡偵探「小查」的遊戲世界，延續結構偵探。
+   IDEA: 名詞卡＝偵探的證物卡：名詞、白話、例子三樣東西釘在一起。
+   PICTURE: 題目卡本身就是畫面；黃色螢光筆標出「這個名詞指的是哪一塊」。
+   COLOUR and TYPE: 與結構偵探相同的亮色系；名詞用文楷，介面用粉圓。
+   LAYOUT: 手機單欄；頂部列、題目卡、選項、底部回饋面板。 */
+:root{color-scheme:light;
+  --bg:#F2F6FB;--ink:#25313F;--muted:#6A7686;--line:#D9E1EB;--white:#fff;
+  --green:#28B47E;--green-d:#1C8C60;--green-l:#E2F7EE;
+  --sun:#FFB21E;--sun-d:#D88D00;--sun-l:#FFF3D6;
+  --sky:#38A6EF;--sky-d:#1C82C8;--sky-l:#E1F1FD;
+  --grape:#8A63E8;--grape-d:#6743C2;--grape-l:#EEE7FD;
+  --coral:#FF6A57;--coral-d:#D64937;--coral-l:#FFE8E4;
+  --teal:#14A7A0;--teal-d:#0D7E78;--teal-l:#DCF4F2;
+  --hl:#FFE066;
+  --f-ui:"Huninn","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  --f-char:"LXGW WenKai TC","Kaiti TC","BiauKai",serif}
+*{box-sizing:border-box;min-width:0}
+html,body{margin:0;background:var(--bg);color:var(--ink)}
+body{font-family:var(--f-ui);font-size:16px;line-height:1.55;-webkit-tap-highlight-color:transparent;padding-top:env(safe-area-inset-top,0px);overflow-x:clip}
+button{font-family:inherit;color:inherit}
+.col{max-width:560px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+#topbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg)}
+.tb{display:flex;align-items:center;gap:12px;padding-block:12px}
+#tbM{flex:1;font-weight:700;font-size:1.15rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.iconbtn{width:44px;height:44px;border-radius:12px;border:2px solid var(--line);background:var(--white);color:var(--muted);font-size:1.15rem;font-weight:700;cursor:pointer;box-shadow:0 3px 0 var(--line);display:grid;place-items:center;flex:none}
+.iconbtn:active{transform:translateY(3px);box-shadow:none}
+.score{display:flex;align-items:center;gap:4px;font-weight:700;color:var(--sun-d);font-size:1.15rem;flex:none}
+.score .star{color:var(--sun);font-size:1.4rem}
+.score.bump .star{animation:pop .45s ease}
+.prog{height:16px;background:#E3E9F1;border-radius:999px;overflow:hidden}
+.prog span{display:block;height:100%;background:var(--green);border-radius:999px;transition:width .4s ease}
+main{padding-bottom:32px}
+.screen{display:flex;flex-direction:column;gap:16px;padding-top:4px;animation:screenin .3s ease}
+@keyframes screenin{from{transform:translateY(12px)}to{transform:none}}
+
+.cbtn{--c:var(--green);--cd:var(--green-d);font-weight:700;font-size:1.05rem;border:0;border-radius:16px;padding:14px 18px;min-height:48px;background:var(--c);color:#fff;box-shadow:0 4px 0 var(--cd);cursor:pointer}
+.cbtn:active{transform:translateY(4px);box-shadow:none}
+.cbtn.secondary{background:var(--white);color:var(--ink);border:2px solid var(--line);box-shadow:0 4px 0 var(--line)}
+
+.mascot-svg{display:block;width:100%;height:auto;overflow:visible}
+.mascot-wrap{animation:bob 3.2s ease-in-out infinite}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+.hero{display:flex;align-items:center;gap:12px}
+.hero .mascot-wrap{width:96px;flex:none}
+.bubble{flex:1;background:var(--white);border:2px solid var(--line);border-radius:18px;padding:10px 14px;font-weight:700;line-height:1.45;box-shadow:0 3px 0 var(--line)}
+.bubble b{color:var(--sky-d)}
+
+h2.sec{margin:8px 0 0;font-size:1.2rem;display:flex;align-items:center;gap:8px}
+h2.sec .step{background:var(--ink);color:#fff;border-radius:999px;font-size:.85rem;padding:2px 10px}
+.sec-note{margin:-8px 0 0;color:var(--muted);font-size:.92rem}
+.cards{display:flex;flex-direction:column;gap:12px}
+.gcard{display:flex;align-items:center;gap:14px;text-align:left;background:var(--white);border:2px solid var(--line);border-radius:20px;padding:12px 14px;box-shadow:0 5px 0 var(--line);cursor:pointer;width:100%}
+.gcard:active{transform:translateY(5px);box-shadow:none}
+.gicon{flex:none;width:60px;height:60px;border-radius:16px;background:var(--c);box-shadow:inset 0 -5px 0 var(--cd);display:grid;place-items:center;color:#fff;font-size:1.5rem;font-weight:700;font-family:var(--f-char)}
+.gtext{display:flex;flex-direction:column;gap:2px;flex:1}
+.gtext b{font-size:1.15rem}
+.gtext small{color:var(--muted);font-size:.88rem}
+.badge{flex:none;font-size:.85rem;font-weight:700;color:var(--green-d);background:var(--green-l);border-radius:999px;padding:2px 10px}
+details.notes{background:var(--white);border:2px solid var(--line);border-radius:18px;padding:12px 16px;font-size:.93rem}
+details.notes summary{cursor:pointer;font-weight:700}
+details.notes ul{margin:8px 0 0;padding-left:1.2em;color:var(--muted)}
+details.notes li{margin:5px 0}
+details.notes b{color:var(--ink)}
+
+/* 題目 */
+.qcard{background:var(--white);border:2px solid var(--line);border-radius:22px;padding:18px 16px;box-shadow:0 5px 0 var(--line);text-align:center;display:flex;flex-direction:column;gap:8px}
+.qcard .ask{color:var(--muted);font-weight:700;font-size:.95rem}
+.qcard .word{font-family:var(--f-char);font-weight:700;font-size:2.6rem;line-height:1.2}
+.qcard .exbig{font-size:1.9rem;font-weight:700;line-height:1.5}
+.qcard .def{font-size:1.2rem;font-weight:700;line-height:1.55;text-align:left}
+.qcard.scene .story{font-size:1.15rem;line-height:1.75;text-align:left;font-weight:700}
+.opts{display:flex;flex-direction:column;gap:10px}
+.opt{display:flex;align-items:center;gap:12px;text-align:left;border:2px solid var(--line);background:var(--white);border-radius:16px;padding:12px 14px;min-height:56px;cursor:pointer;font-weight:700;font-size:1.1rem;box-shadow:0 4px 0 var(--line)}
+.opt:active{transform:translateY(4px);box-shadow:none}
+.opt .lt{flex:none;width:28px;height:28px;border-radius:8px;background:var(--bg);color:var(--muted);display:grid;place-items:center;font-size:.85rem}
+.opt .w{font-family:var(--f-char);font-size:1.45rem}
+.opt .ex{font-size:1.35rem}
+.opt .tool{display:flex;flex-direction:column;gap:0}
+.opt .tool small{color:var(--muted);font-size:.85rem;font-weight:700}
+.opt.out{opacity:.45;text-decoration:line-through;box-shadow:none;cursor:default;border-color:var(--coral)}
+.opt.right{border-color:var(--green);background:var(--green-l);box-shadow:0 4px 0 var(--green)}
+.opt[disabled]{cursor:default}
+.shake{animation:shake .4s ease}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}50%{transform:translateX(6px)}75%{transform:translateX(-3px)}}
+@keyframes pop{0%{transform:scale(1)}40%{transform:scale(1.6)}100%{transform:scale(1)}}
+
+mark,.hl{background:linear-gradient(transparent 12%,var(--hl) 12%,var(--hl) 92%,transparent 92%);color:inherit;padding:0 3px;border-radius:4px}
+.k{transition:background .3s}
+.reveal .k{background:linear-gradient(transparent 12%,var(--hl) 12%,var(--hl) 92%,transparent 92%);border-radius:4px;padding:0 2px}
+.fr{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;font-size:.82em;line-height:1.15;margin:0 2px}
+.fr>span:first-child{border-bottom:2px solid currentColor;padding:0 3px}
+sup{font-size:.62em}
+
+/* 名詞卡 */
+.tcard{background:var(--white);border:2px solid var(--c,var(--sky));border-radius:18px;padding:12px 14px;display:grid;grid-template-columns:auto 1fr;gap:4px 12px;align-items:baseline;box-shadow:0 4px 0 var(--c,var(--sky))}
+.tcard .w{font-family:var(--f-char);font-weight:700;font-size:1.6rem;grid-row:span 2;align-self:center}
+.tcard .ex{font-weight:700;font-size:1.15rem}
+.tcard .d{color:var(--ink);font-size:.95rem}
+.tcard .lab{color:var(--muted);font-size:.78rem;margin-right:6px}
+.toolcard{background:var(--white);border:2px solid var(--teal);border-radius:16px;padding:10px 14px;box-shadow:0 4px 0 var(--teal)}
+.toolcard b{font-size:1.1rem}
+.toolcard .f{font-size:1.15rem;font-weight:700;margin-left:6px}
+.toolcard p{margin:4px 0 0;font-size:.92rem;color:var(--muted)}
+.cues{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.cue{background:var(--sun-l);border:1.5px solid var(--sun);color:var(--sun-d);border-radius:999px;padding:1px 10px;font-size:.85rem;font-weight:700}
+.chap{display:flex;flex-direction:column;gap:10px}
+.chap h3{margin:8px 0 0;font-size:1.1rem}
+
+/* 底部回饋 */
+#sheet{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--white);border-top:2px solid var(--line);padding-top:14px;padding-bottom:calc(16px + env(safe-area-inset-bottom,0px))}
+#sheet.good{background:var(--green-l);border-top-color:var(--green)}
+#sheet.bad{background:var(--coral-l);border-top-color:var(--coral)}
+#sheet.up{animation:sheetup .35s cubic-bezier(.3,1.35,.5,1)}
+@keyframes sheetup{from{transform:translateY(40%)}to{transform:none}}
+.sh-in{display:flex;flex-direction:column;gap:12px;max-height:60vh;overflow:auto}
+.sh-title{margin:0;font-weight:700;font-size:1.2rem}
+.good .sh-title{color:var(--green-d)}.bad .sh-title{color:var(--coral-d)}
+.sh-body{font-size:.98rem;display:flex;flex-direction:column;gap:10px}
+.sh-body p{margin:0}
+.work{font-size:1.2rem;font-weight:700;background:var(--white);border:2px dashed var(--green);border-radius:14px;padding:8px 12px;line-height:1.9}
+.sh-btns{display:flex;gap:10px}.sh-btns .cbtn{flex:1}
+
+.donebox{display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;padding-top:16px}
+.donebox .mascot-wrap{width:130px}
+.donebox h2{margin:0;font-size:1.6rem}
+.donebox p{margin:0;color:var(--muted)}
+.missed{width:100%;text-align:left;background:var(--white);border:2px solid var(--line);border-radius:18px;padding:12px 16px}
+.missed b{display:block;margin-bottom:6px}
+.missed span{display:inline-block;background:var(--coral-l);color:var(--coral-d);border-radius:999px;padding:2px 10px;margin:3px 4px 3px 0;font-weight:700;font-size:.92rem}
+.btncol{display:flex;flex-direction:column;gap:12px;width:100%;max-width:320px;margin-top:6px}
+:focus-visible{outline:3px solid var(--sky);outline-offset:3px}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style></head><body>
+<div id="topbar"><div class="col tb"><div id="tbL"></div><div id="tbM"></div>
+  <div class="score" id="score" aria-live="polite"><span class="star">★</span><span id="stars">0</span></div></div></div>
+<main class="col" id="screen"></main>
+<div id="sheet" hidden></div>
+
+<script>
+{
+/* ================= 名詞（國一上） =================
+   w 名詞；d 白話意思；ex 例子（[[ ]] 是黃色標記，{a/b} 是分數）；g 容易搞混的同一組 */
+const CH=[
+ {id:'c1',name:'整數',sub:'正負數、數線、次方、運算名詞',icon:'±',color:'sky',terms:[
+  {w:'正數',d:'比 0 大的數。在數線上，0 的右邊。',ex:'[[+3]]、[[7]]、[[2.5]]',g:'sign'},
+  {w:'負數',d:'比 0 小的數，前面有「−」號。在數線上，0 的左邊。',ex:'[[−3]]、[[−7]]、[[−2.5]]',g:'sign'},
+  {w:'相反數',d:'在數線上離 0 一樣遠，但一個在左邊、一個在右邊的兩個數。',ex:'[[6]] 和 [[−6]]',g:'sign'},
+  {w:'絕對值',d:'一個數在數線上離 0 有多遠。一定不是負的。',ex:'[[|−6|]] = 6',g:'dist',no:['兩點的距離']},
+  {w:'兩點的距離',d:'數線上兩個點中間有多長，用 |a − b| 算。',ex:'A 在 −2，B 在 5，AB = [[7]]',g:'dist'},
+  {w:'底數',d:'次方裡，被重複相乘的那個數。',ex:'[[2]]<sup>5</sup>',g:'pow'},
+  {w:'指數',d:'次方右上角的小數字，表示同一個數乘了幾次。',ex:'2<sup>[[5]]</sup>',g:'pow'},
+  {w:'次方',d:'同一個數重複相乘，寫成比較短的樣子。',ex:'3 × 3 × 3 × 3 = [[3<sup>4</sup>]]',g:'pow'},
+  {w:'科學記號',d:'把很大或很小的數，寫成「1 到 10 之間的數 × 10 的幾次方」。',ex:'52000 = [[5.2 × 10<sup>4</sup>]]',g:'pow'},
+  {w:'和',d:'加法算出來的答案。',ex:'3 + 5 = [[8]]',g:'op'},
+  {w:'差',d:'減法算出來的答案。',ex:'9 − 4 = [[5]]',g:'op'},
+  {w:'積',d:'乘法算出來的答案。',ex:'3 × 4 = [[12]]',g:'op'},
+  {w:'商',d:'除法算出來的答案。',ex:'12 ÷ 4 = [[3]]',g:'op'}]},
+ {id:'c2',name:'因數、倍數與分數',sub:'質數、公因數、倒數、指數律',icon:'÷',color:'sun',terms:[
+  {w:'因數',d:'能把某個數整除（除得盡、沒有餘數）的數。',ex:'12 ÷ [[4]] = 3，除得盡',g:'fm'},
+  {w:'倍數',d:'一個數乘上 1、2、3……得到的數。',ex:'[[12]] ÷ 4 = 3，除得盡',g:'fm'},
+  {w:'質數',d:'比 1 大，而且因數只有 1 和它自己的數。',ex:'[[2]]、[[3]]、[[5]]、[[7]]、[[11]]',g:'pr'},
+  {w:'合數',d:'比 1 大，除了 1 和它自己，還有別的因數的數。',ex:'[[4]]、[[6]]、[[8]]、[[9]]、[[10]]',g:'pr'},
+  {w:'質因數分解',d:'把一個數拆成好幾個質數相乘。',ex:'60 = [[2<sup>2</sup> × 3 × 5]]',g:'pr'},
+  {w:'最大公因數',d:'兩個數共同的因數裡，最大的那一個。',ex:'12 和 18 → [[6]]',g:'gl',no:['因數','倍數']},
+  {w:'最小公倍數',d:'兩個數共同的倍數裡，最小的那一個。',ex:'4 和 6 → [[12]]',g:'gl',no:['因數','倍數']},
+  {w:'分子',d:'分數線上面的數，表示取了幾份。',ex:'{[[3]]/4}',g:'fr'},
+  {w:'分母',d:'分數線下面的數，表示全部平分成幾份。',ex:'{3/[[4]]}',g:'fr'},
+  {w:'倒數',d:'兩個數相乘等於 1，它們就互為倒數。',ex:'[[{2/3}]] 和 [[{3/2}]]',g:'fr',no:['最簡分數']},
+  {w:'最簡分數',d:'分子和分母除了 1 以外，沒有共同因數的分數。',ex:'{6/8} = [[{3/4}]]',g:'fr'},
+  {w:'指數律',d:'次方相乘、相除、再次方時，可以直接算指數的規則。',ex:'[[2<sup>3</sup> × 2<sup>4</sup> = 2<sup>7</sup>]]',g:'pr'}]},
+ {id:'c3',name:'一元一次方程式',sub:'未知數、係數、移項',icon:'x',color:'grape',terms:[
+  {w:'未知數',d:'還不知道的數，先用字母（像 x）代替。',ex:'3[[x]] + 2',g:'part'},
+  {w:'係數',d:'字母前面乘的那個數。',ex:'[[3]]x + 2',g:'part'},
+  {w:'常數項',d:'式子裡沒有字母的那一項。',ex:'3x + [[2]]',g:'part'},
+  {w:'同類項',d:'字母部分完全一樣、可以合併的項。',ex:'[[3x]] + 2 + [[5x]]',g:'part'},
+  {w:'代數式',d:'用數字和字母寫成、沒有等號的式子。',ex:'[[2a − 7]]',g:'eq'},
+  {w:'方程式',d:'有未知數，而且有等號的式子。',ex:'[[3x + 2 = 11]]',g:'eq'},
+  {w:'解',d:'代進方程式後，讓等號兩邊一樣大的數。',ex:'2x + 1 = 7，x = [[3]]',g:'eq'},
+  {w:'移項',d:'把一項從等號的一邊搬到另一邊，加變減、減變加。',ex:'x + 5 = 8 → x = 8 [[− 5]]',g:'eq'}]}
+];
+
+/* ================= 工具與情境題 ================= */
+const TOOLS={
+ dist:{n:'兩點的距離',f:'|a − b|',use:'兩個位置（常常一正一負）差多遠。',cue:['相距','差幾','從…變成…','海平面上／下','零下']},
+ rec:{n:'除以分數',f:'÷ {b/c} = × {c/b}',use:'一個量裡面，有幾個「分數那麼多」。',cue:['每＿（分數）','可以分幾份','1 小時可以…']},
+ pow:{n:'次方',f:'a<sup>n</sup>',use:'同一個數一直重複乘。',cue:['每次都變成幾倍','對折','每人傳給幾人','長寬高都一樣']},
+ gcd:{n:'最大公因數',f:'(a, b)',use:'把東西分成一樣、不能剩，問最多或最大。',cue:['平分','剪成一樣','不剩','最多','最大','最長']},
+ lcm:{n:'最小公倍數',f:'[a, b]',use:'兩件事各自重複，問下次一起；或拼成一樣大，問最小。',cue:['每＿分鐘／天','同時','再一起','至少','最小','剛好分完']},
+ eq:{n:'列方程式',f:'設 x',use:'有一個不知道的數，題目說出它和別的數的關係。',cue:['某數','等於','是…的幾倍多','比…多']}
+};
+const SC=[
+ {t:'dist',s:'早上氣溫是 [[−3°C]]，中午是 [[8°C]]。中午比早上[[高了幾度]]？',why:'一個在 0 下面、一個在 0 上面，問差多少，就是數線上兩點的距離：|8 − (−3)|。'},
+ {t:'dist',s:'潛水員在[[海平面下 15 公尺]]，海鷗在[[海平面上 20 公尺]]。牠們[[相距]]幾公尺？',why:'海平面當作 0，上面是正、下面是負，問「相距」就是兩點的距離：|20 − (−15)|。'},
+ {t:'dist',s:'數線上 A 點在 [[−7]]，B 點在 [[4]]。A、B 兩點[[相距多遠]]？',why:'直接問數線上兩點相距多遠：|4 − (−7)|。'},
+ {t:'dist',s:'小安的帳戶從[[欠 300 元]]變成[[有 500 元]]，一共[[增加了多少錢]]？',why:'欠錢當作負的，從 −300 變成 500，差多少就是兩點的距離：|500 − (−300)|。'},
+ {t:'rec',s:'一瓶果汁有 {3/4} 公升，[[每杯倒 {1/8} 公升]]，[[可以倒幾杯]]？',why:'問「{3/4} 裡面有幾個 {1/8}」，就是 {3/4} ÷ {1/8}，除以分數要乘以倒數。'},
+ {t:'rec',s:'一條 2 公尺長的緞帶，[[每 {1/4} 公尺剪一段]]，[[可以剪幾段]]？',why:'問「2 裡面有幾個 {1/4}」，就是 2 ÷ {1/4} = 2 × 4。'},
+ {t:'rec',s:'有 6 公斤的麵粉，[[每次用 {2/3} 公斤]]，[[可以用幾次]]？',why:'問「6 裡面有幾個 {2/3}」，就是 6 ÷ {2/3} = 6 × {3/2}。'},
+ {t:'rec',s:'阿哲 [[{1/2} 小時]]走了 3 公里，照這個速度，[[1 小時]]可以走幾公里？',why:'走的距離 ÷ 花的時間：3 ÷ {1/2} = 3 × 2。'},
+ {t:'pow',s:'1 個細胞[[每小時分裂成 2 個]]，[[10 小時後]]會有幾個？',why:'每小時都乘 2，乘了 10 次，就是 2<sup>10</sup>。'},
+ {t:'pow',s:'一張紙[[對折 6 次]]，攤開後會被摺痕分成幾格？',why:'每對折一次，格數變成 2 倍，折 6 次就是 2<sup>6</sup>。'},
+ {t:'pow',s:'一則訊息，[[每個人都傳給 3 個新朋友]]。從 1 個人開始，[[傳到第 5 輪]]時，這一輪有幾個人收到？',why:'每一輪都乘 3，傳 5 輪就是 3<sup>5</sup>。'},
+ {t:'pow',s:'一個正方體的[[長、寬、高都是 7 公分]]，體積是幾立方公分？',why:'同一個數 7 乘了 3 次，就是 7<sup>3</sup>。'},
+ {t:'gcd',s:'有 24 顆糖和 36 顆巧克力，要[[平分]]成好幾袋，每袋的糖一樣多、巧克力也一樣多，[[沒有剩]]。[[最多]]可以分幾袋？',why:'袋數要能同時整除 24 和 36（不剩），又要最多，就是最大公因數 (24, 36)。'},
+ {t:'gcd',s:'一張長 48 公分、寬 36 公分的紙，要[[剪成一樣大的正方形]]，[[不能剩]]。正方形的邊長[[最大]]是幾公分？',why:'邊長要能同時整除 48 和 36，又要最大，就是 (48, 36)。'},
+ {t:'gcd',s:'18 個男生、27 個女生要分組，每組男生一樣多、女生也一樣多，[[全部分完]]。[[最多]]能分幾組？',why:'組數要同時整除 18 和 27，又要最多，就是 (18, 27)。'},
+ {t:'gcd',s:'兩條繩子各長 30 公尺和 45 公尺，要[[剪成一樣長]]的小段，[[不剩]]。每段[[最長]]是幾公尺？',why:'每段長度要同時整除 30 和 45，又要最長，就是 (30, 45)。'},
+ {t:'lcm',s:'A 公車[[每 12 分鐘]]一班，B 公車[[每 18 分鐘]]一班。7:00 [[同時發車]]，[[下一次同時發車]]是幾點？',why:'下次一起出發的時間，要同時是 12 和 18 的倍數，又要最早，就是 [12, 18]。'},
+ {t:'lcm',s:'小華[[每 4 天]]游一次泳，小美[[每 6 天]]游一次。今天兩人一起游，[[至少]]幾天後會[[再一起游]]？',why:'天數要同時是 4 和 6 的倍數，又要最少，就是 [4, 6]。'},
+ {t:'lcm',s:'用很多塊長 6 公分、寬 4 公分的磁磚，排成一個[[正方形]]。這個正方形的邊長[[最小]]是幾公分？',why:'邊長要同時是 6 和 4 的倍數，又要最小，就是 [6, 4]。'},
+ {t:'lcm',s:'一盒糖，[[8 顆一包]]或[[10 顆一包]]都[[剛好分完]]。這盒糖[[至少]]有幾顆？',why:'顆數要同時是 8 和 10 的倍數，又要最少，就是 [8, 10]。'},
+ {t:'eq',s:'[[某數]]的 3 倍再加 5，[[等於]] 26。某數是多少？',why:'不知道的數設成 x，照題目寫：3x + 5 = 26。'},
+ {t:'eq',s:'買 4 枝一樣價錢的筆，付 100 元，找回 12 元。[[一枝筆多少元]]？',why:'不知道一枝多少錢，設成 x：4x + 12 = 100。'},
+ {t:'eq',s:'爸爸今年 40 歲，[[是小明年齡的 3 倍多 4 歲]]。小明今年幾歲？',why:'小明的年齡設成 x：3x + 4 = 40。'},
+ {t:'eq',s:'一個長方形的周長是 30 公分，[[長比寬多 3 公分]]。[[寬]]是幾公分？',why:'寬設成 x，長就是 x + 3：2(x + x + 3) = 30。'}
+];
+
+/* ================= 第 3 步：看算式，選規則 ================= */
+const SUP=x=>`<sup>${x}</sup>`;
+const RULESETS=[
+ {id:'r1',name:'正負數的加減',icon:'±',sub:'加正數、加負數、減正數、減負數',
+  T:{ap:{n:'加正數',f:'a + (+b) = a + b',use:'在數線上往右走 b 格。'},
+     an:{n:'加負數',f:'a + (−b) = a − b',use:'在數線上往左走，等於減掉 b。'},
+     sp:{n:'減正數',f:'a − (+b) = a − b',use:'在數線上往左走 b 格。'},
+     sn:{n:'減負數',f:'a − (−b) = a + b',use:'在數線上往右走，等於加上 b。'}},
+  items:[
+   {e:'5 − (−3)',t:'sn',why:'減號後面是 −3，是負數，所以是「減負數」，要變成加。',work:'5 − (−3) = 5 + 3 = 8'},
+   {e:'(−4) + (−6)',t:'an',why:'加號後面是 −6，是負數，所以是「加負數」，等於減掉 6。',work:'(−4) + (−6) = −4 − 6 = −10'},
+   {e:'7 + (−9)',t:'an',why:'加號後面是 −9，是負數。',work:'7 + (−9) = 7 − 9 = −2'},
+   {e:'(−2) − (+5)',t:'sp',why:'減號後面是 +5，是正數。',work:'(−2) − (+5) = −2 − 5 = −7'},
+   {e:'(−8) − (−3)',t:'sn',why:'減號後面是 −3，是負數，要變成加。',work:'(−8) − (−3) = −8 + 3 = −5'},
+   {e:'−3 − 5',t:'sp',why:'第一個數是 −3 沒關係，要看<b>運算符號後面</b>的數：減號後面是 5，沒有負號，是正數。',work:'−3 − 5 = −8'},
+   {e:'(−6) + (+10)',t:'ap',why:'加號後面是 +10，是正數。',work:'(−6) + (+10) = −6 + 10 = 4'},
+   {e:'12 − (−12)',t:'sn',why:'減號後面是 −12，是負數，要變成加。',work:'12 − (−12) = 12 + 12 = 24'},
+   {e:'−7 + 2',t:'ap',why:'加號後面是 2，是正數。前面的 −7 不影響判斷。',work:'−7 + 2 = −5'},
+   {e:'0 − (−4)',t:'sn',why:'減號後面是 −4，是負數，要變成加。',work:'0 − (−4) = 0 + 4 = 4'}]},
+ {id:'r2',name:'正負數的乘除',icon:'×',sub:'負負得正、一正一負得負、數負號',
+  T:{pp:{n:'兩個都是正數',f:'(+) × (+) = (+)',use:'答案是正的。'},
+     nn:{n:'兩個都是負數',f:'(−) × (−) = (+)',use:'負負得正，答案是正的。除法也一樣。'},
+     pn:{n:'一正一負',f:'(+) × (−) = (−)',use:'答案是負的。除法也一樣。'},
+     cnt:{n:'三個以上的數',f:'數負號',use:'負號有偶數個，答案是正的；有奇數個，答案是負的。'}},
+  items:[
+   {e:'(−6) × (−4)',t:'nn',why:'兩個都是負數，負負得正。',work:'(−6) × (−4) = +(6 × 4) = 24'},
+   {e:'8 × (−3)',t:'pn',why:'8 是正數、−3 是負數，一正一負。',work:'8 × (−3) = −(8 × 3) = −24'},
+   {e:'(−20) ÷ 5',t:'pn',why:'除法也一樣看：一正一負，答案是負的。',work:'(−20) ÷ 5 = −(20 ÷ 5) = −4'},
+   {e:'(−18) ÷ (−6)',t:'nn',why:'兩個都是負數，答案是正的。',work:'(−18) ÷ (−6) = +(18 ÷ 6) = 3'},
+   {e:'12 ÷ (+4)',t:'pp',why:'兩個都是正數。',work:'12 ÷ (+4) = 3'},
+   {e:'(−2) × (−3) × (−5)',t:'cnt',why:'有三個數，數負號：3 個，是奇數，答案是負的。',work:'(−2) × (−3) × (−5) = −(2 × 3 × 5) = −30'},
+   {e:'(−1) × 4 × (−5)',t:'cnt',why:'有三個數，數負號：2 個，是偶數，答案是正的。',work:'(−1) × 4 × (−5) = +(1 × 4 × 5) = 20'},
+   {e:'(−36) ÷ (−4) ÷ (−3)',t:'cnt',why:'有三個數，數負號：3 個，是奇數，答案是負的。',work:'(−36) ÷ (−4) ÷ (−3) = −(36 ÷ 4 ÷ 3) = −3'},
+   {e:'9 × (−1)',t:'pn',why:'一正一負，答案是負的。',work:'9 × (−1) = −9'},
+   {e:'(−5) × (−5)',t:'nn',why:'兩個都是負數，負負得正。',work:'(−5) × (−5) = +(5 × 5) = 25'}]},
+ {id:'r3',name:'負號和次方',icon:'²',sub:'(−2)⁴ 和 −2⁴ 不一樣',
+  T:{ev:{n:'負數的偶數次方',f:`(−a)${SUP('偶數')} 是正的`,use:'括號裡的負數乘偶數次，負號兩兩抵消，答案是正的。'},
+     od:{n:'負數的奇數次方',f:`(−a)${SUP('奇數')} 是負的`,use:'括號裡的負數乘奇數次，會剩一個負號，答案是負的。'},
+     out:{n:'負號在括號外面',f:`−a${SUP('n')} = −(a${SUP('n')})`,use:'次方只管 a，先算 a 的次方，最後再加負號。'}},
+  items:[
+   {e:`(−3)${SUP(2)}`,t:'ev',why:'負號在括號裡，乘 2 次，是偶數次。',work:`(−3)${SUP(2)} = (−3) × (−3) = 9`},
+   {e:`(−3)${SUP(3)}`,t:'od',why:'負號在括號裡，乘 3 次，是奇數次。',work:`(−3)${SUP(3)} = (−3) × (−3) × (−3) = −27`},
+   {e:`−3${SUP(2)}`,t:'out',why:'沒有括號，次方只管 3，負號最後才加。',work:`−3${SUP(2)} = −(3 × 3) = −9`},
+   {e:`(−1)${SUP(5)}`,t:'od',why:'負號在括號裡，5 是奇數。',work:`(−1)${SUP(5)} = −1`},
+   {e:`(−1)${SUP(100)}`,t:'ev',why:'負號在括號裡，100 是偶數。',work:`(−1)${SUP(100)} = 1`},
+   {e:`−5${SUP(2)}`,t:'out',why:'沒有括號，次方只管 5。',work:`−5${SUP(2)} = −(5 × 5) = −25`},
+   {e:`(−2)${SUP(6)}`,t:'ev',why:'負號在括號裡，6 是偶數。',work:`(−2)${SUP(6)} = 2${SUP(6)} = 64`},
+   {e:`−2${SUP(3)}`,t:'out',why:'沒有括號，次方只管 2，最後再加負號。',work:`−2${SUP(3)} = −(2 × 2 × 2) = −8`},
+   {e:`(−10)${SUP(3)}`,t:'od',why:'負號在括號裡，3 是奇數。',work:`(−10)${SUP(3)} = −1000`}]},
+ {id:'r4',name:'分數的四則運算',icon:'½',sub:'什麼時候要通分？',
+  T:{diff:{n:'加減，分母不一樣',f:'先通分',use:'把分母變成一樣，才能把分子加減。'},
+     same:{n:'加減，分母一樣',f:'{a/c} + {b/c} = {a + b/c}',use:'分母不變，只把分子加減。'},
+     mul:{n:'乘法',f:'{a/b} × {c/d} = {a × c/b × d}',use:'分子乘分子、分母乘分母，可以先約分。<b>不用通分</b>。'},
+     div:{n:'除法',f:'÷ {c/d} = × {d/c}',use:'除以一個數，改成乘它的倒數。'}},
+  items:[
+   {e:'{1/3} + {1/4}',t:'diff',why:'加法，分母 3 和 4 不一樣，要先通分。',work:'{1/3} + {1/4} = {4/12} + {3/12} = {7/12}'},
+   {e:'{2/7} + {3/7}',t:'same',why:'加法，分母都是 7，直接把分子相加。',work:'{2/7} + {3/7} = {5/7}'},
+   {e:'{2/3} × {3/5}',t:'mul',why:'乘法不用通分，分子乘分子、分母乘分母。',work:'{2/3} × {3/5} = {2 × 3/3 × 5} = {6/15} = {2/5}'},
+   {e:'{2/3} ÷ {4/5}',t:'div',why:'除以 {4/5}，改成乘它的倒數 {5/4}。',work:'{2/3} ÷ {4/5} = {2/3} × {5/4} = {10/12} = {5/6}'},
+   {e:'{5/6} − {1/4}',t:'diff',why:'減法，分母 6 和 4 不一樣，要先通分。',work:'{5/6} − {1/4} = {10/12} − {3/12} = {7/12}'},
+   {e:'{7/9} − {4/9}',t:'same',why:'減法，分母都是 9，直接把分子相減。',work:'{7/9} − {4/9} = {3/9} = {1/3}'},
+   {e:'{1/2} × {1/3}',t:'mul',why:'分母不一樣，但這是<b>乘法</b>，不用通分。',work:'{1/2} × {1/3} = {1 × 1/2 × 3} = {1/6}'},
+   {e:'3 ÷ {3/4}',t:'div',why:'除以 {3/4}，改成乘它的倒數 {4/3}。',work:'3 ÷ {3/4} = 3 × {4/3} = 4'},
+   {e:'(−{1/2}) + {1/3}',t:'diff',why:'加法，分母 2 和 3 不一樣，要先通分。正負號照加減的規則處理。',work:'(−{1/2}) + {1/3} = (−{3/6}) + {2/6} = −{1/6}'},
+   {e:'{3/8} × (−4)',t:'mul',why:'乘法不用通分。一正一負，答案是負的。',work:'{3/8} × (−4) = −{3 × 4/8} = −{12/8} = −{3/2}'}]},
+ {id:'r5',name:'指數律',icon:'aⁿ',sub:'相乘、相除、再次方，還有不能用的時候',
+  T:{add:{n:'同底數相乘',f:`a${SUP('m')} × a${SUP('n')} = a${SUP('m + n')}`,use:'底數一樣、相乘，指數相加。'},
+     sub:{n:'同底數相除',f:`a${SUP('m')} ÷ a${SUP('n')} = a${SUP('m − n')}`,use:'底數一樣、相除，指數相減。'},
+     mul:{n:'次方再次方',f:`(a${SUP('m')})${SUP('n')} = a${SUP('m × n')}`,use:'括號外面還有次方，指數相乘。'},
+     ab:{n:'同指數相乘',f:`a${SUP('n')} × b${SUP('n')} = (a × b)${SUP('n')}`,use:'底數不同、但指數一樣，可以先把底數相乘。'},
+     no:{n:'不能用指數律',f:'先各自算出來',use:'次方相加減，或底數和指數都不一樣，就不能用指數律。'}},
+  items:[
+   {e:`2${SUP(3)} × 2${SUP(5)}`,t:'add',why:'底數都是 2，相乘，指數相加。',work:`2${SUP(3)} × 2${SUP(5)} = 2${SUP('3 + 5')} = 2${SUP(8)}`},
+   {e:`3${SUP(7)} ÷ 3${SUP(2)}`,t:'sub',why:'底數都是 3，相除，指數相減。',work:`3${SUP(7)} ÷ 3${SUP(2)} = 3${SUP('7 − 2')} = 3${SUP(5)}`},
+   {e:`(5${SUP(2)})${SUP(3)}`,t:'mul',why:'括號外面還有次方，指數相乘。',work:`(5${SUP(2)})${SUP(3)} = 5${SUP('2 × 3')} = 5${SUP(6)}`},
+   {e:`2${SUP(4)} × 5${SUP(4)}`,t:'ab',why:'底數不同，但指數都是 4，可以先把 2 和 5 相乘。',work:`2${SUP(4)} × 5${SUP(4)} = (2 × 5)${SUP(4)} = 10${SUP(4)}`},
+   {e:`2${SUP(3)} + 2${SUP(4)}`,t:'no',why:'這是<b>加法</b>，指數律只能用在乘、除和再次方。',work:`2${SUP(3)} + 2${SUP(4)} = 8 + 16 = 24`},
+   {e:`10${SUP(6)} ÷ 10${SUP(2)}`,t:'sub',why:'底數都是 10，相除，指數相減。',work:`10${SUP(6)} ÷ 10${SUP(2)} = 10${SUP('6 − 2')} = 10${SUP(4)}`},
+   {e:`(2${SUP(3)})${SUP(4)}`,t:'mul',why:'括號外面還有次方，指數相乘。',work:`(2${SUP(3)})${SUP(4)} = 2${SUP('3 × 4')} = 2${SUP(12)}`},
+   {e:`7${SUP(2)} × 7`,t:'add',why:'底數都是 7，相乘。單獨的 7 就是 7${SUP(1)}。',work:`7${SUP(2)} × 7 = 7${SUP('2 + 1')} = 7${SUP(3)}`},
+   {e:`2${SUP(3)} × 3${SUP(2)}`,t:'no',why:'底數不一樣（2 和 3），指數也不一樣（3 和 2），不能用指數律。',work:`2${SUP(3)} × 3${SUP(2)} = 8 × 9 = 72`},
+   {e:`4${SUP(3)} × 25${SUP(3)}`,t:'ab',why:'底數不同，但指數都是 3，可以先把 4 和 25 相乘。',work:`4${SUP(3)} × 25${SUP(3)} = (4 × 25)${SUP(3)} = 100${SUP(3)}`},
+   {e:`5${SUP(4)} − 5${SUP(2)}`,t:'no',why:'這是<b>減法</b>，不能把指數相減。',work:`5${SUP(4)} − 5${SUP(2)} = 625 − 25 = 600`}]}
+];
+RULESETS.forEach(r=>r.tools=Object.keys(r.T));
+
+const STAGES=[
+ {id:'s1',name:'距離、除以分數、次方',tools:['dist','rec','pow'],icon:'1'},
+ {id:'s2',name:'公因數、公倍數、方程式',tools:['gcd','lcm','eq'],icon:'2'},
+ {id:'s3',name:'六種混在一起',tools:['dist','rec','pow','gcd','lcm','eq'],icon:'3',take:12}
+];
+
+/* ================= 共用 ================= */
+const fmt=s=>s.replace(/\{([^{}\/]+)\/([^{}]+)\}/g,(_,a,b)=>`<span class="fr"><span>${a}</span><span>${b}</span></span>`)
+  .replace(/\[\[(.+?)\]\]/g,'<mark>$1</mark>');
+const fmtK=s=>s.replace(/\{([^{}\/]+)\/([^{}]+)\}/g,(_,a,b)=>`<span class="fr"><span>${a}</span><span>${b}</span></span>`)
+  .replace(/\[\[(.+?)\]\]/g,'<span class="k">$1</span>');
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;};
+const LT='ABCDEF';
+const $=s=>document.querySelector(s);
+const screenEl=$('#screen'),sheetEl=$('#sheet');
+const S={screen:'home',kind:null,ref:null,queue:[],i:0,firstOK:0,missed:[],stars:0,best:{}};
+
+let ac=null;
+function tone(f,d,type='triangle',v=.12,delay=0){try{ac=ac||new (window.AudioContext||window.webkitAudioContext)();if(ac.state==='suspended')ac.resume();const t=ac.currentTime+delay,o=ac.createOscillator(),g=ac.createGain();o.type=type;o.frequency.setValueAtTime(f,t);g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(v,t+.01);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g);g.connect(ac.destination);o.start(t);o.stop(t+d+.03);}catch(e){}}
+const sYes=()=>{tone(784,.1);tone(1175,.16,'triangle',.12,.08);};
+const sNo=()=>{tone(240,.16,'square',.05);tone(180,.2,'square',.05,.1);};
+const sWin=()=>[523,659,784,1047].forEach((f,i)=>tone(f,.2,'triangle',.12,i*.09));
+const sTap=()=>tone(720,.05,'triangle',.08);
+
+function mascot(m){
+  const ink='#25313F';
+  const eyes=m==='happy'?`<path d="M30 50 Q35 42.5 40 50" fill="none" stroke="${ink}" stroke-width="3.6" stroke-linecap="round"/><path d="M51 50 Q56 42.5 61 50" fill="none" stroke="${ink}" stroke-width="3.6" stroke-linecap="round"/>`
+    :`<circle cx="35" cy="49" r="4.8" fill="${ink}"/><circle cx="56" cy="49" r="4.8" fill="${ink}"/><circle cx="36.7" cy="47.3" r="1.6" fill="#fff"/><circle cx="57.7" cy="47.3" r="1.6" fill="#fff"/>`;
+  const mouth=m==='happy'?`<path d="M37 57 Q45.5 73 54 57 Z" fill="#FF6A57" stroke="${ink}" stroke-width="2.6" stroke-linejoin="round"/>`:`<path d="M39 59 Q45.5 65.5 52 59" fill="none" stroke="${ink}" stroke-width="3" stroke-linecap="round"/>`;
+  return `<svg class="mascot-svg" viewBox="0 0 100 112" aria-hidden="true"><ellipse cx="50" cy="108" rx="30" ry="4" fill="#25313F" opacity=".12"/>
+  <line x1="67" y1="73" x2="89" y2="101" stroke="#7B4F28" stroke-width="14" stroke-linecap="round"/><line x1="69" y1="76" x2="87" y2="99" stroke="#A9733F" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="45.5" cy="50" r="31" fill="#EAF6FF" stroke="#FFB21E" stroke-width="8.5"/><path d="M24.8 42.5 A22 22 0 0 1 38 29.3" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
+  <path d="M20 22 C23 3 68 3 71 22 Z" fill="#C9813F"/><path d="M13 22 Q45.5 13 78 22 Q45.5 30 13 22 Z" fill="#9C5D27"/><rect x="21" y="17" width="49" height="4.5" rx="2" fill="#7B4F28"/>
+  ${eyes}${mouth}<circle cx="26.5" cy="57.5" r="4.2" fill="#FF9C8F" opacity=".55"/><circle cx="64.5" cy="57.5" r="4.2" fill="#FF9C8F" opacity=".55"/></svg>`;
+}
+function termCard(t,color){return `<div class="tcard" style="--c:var(--${color})"><span class="w">${t.w}</span><span class="ex">${fmt(t.ex)}</span><span class="d">${t.d}</span></div>`;}
+function toolCard(k,showCue,D=TOOLS){const T=D[k];return `<div class="toolcard"><b>${T.n}</b><span class="f">${fmt(T.f)}</span><p>${D===TOOLS?'用在：':''}${T.use}</p>${showCue&&T.cue?`<div class="cues">${T.cue.map(c=>`<span class="cue">${c}</span>`).join('')}</div>`:''}</div>`;}
+function topbar(l,m){$('#tbL').innerHTML=l||'';$('#tbM').innerHTML=m||'';}
+function show(html){screenEl.innerHTML=`<div class="screen">${html}</div>`;scrollTo(0,0);}
+let lastKey='';
+function sheet(o){
+  sheetEl.hidden=false;sheetEl.className=o.tone||'';
+  sheetEl.innerHTML=`<div class="col sh-in"><p class="sh-title">${o.title}</p>${o.body?`<div class="sh-body">${o.body}</div>`:''}
+    <div class="sh-btns">${o.buttons.map((b,i)=>`<button class="cbtn ${b.kind||''}" data-b="${i}">${b.label}</button>`).join('')}</div></div>`;
+  o.buttons.forEach((b,i)=>sheetEl.querySelector(`[data-b="${i}"]`).onclick=b.onClick);
+  const key=o.tone+o.title;if(key!==lastKey){sheetEl.classList.remove('up');void sheetEl.offsetWidth;sheetEl.classList.add('up');lastKey=key;}
+  screenEl.style.paddingBottom=(sheetEl.offsetHeight+24)+'px';
+}
+function hideSheet(){sheetEl.hidden=true;lastKey='';screenEl.style.paddingBottom='';}
+function addStar(){S.stars++;$('#stars').textContent=S.stars;const sc=$('#score');sc.classList.remove('bump');void sc.offsetWidth;sc.classList.add('bump');}
+
+/* ================= 首頁 ================= */
+function home(){
+  S.screen='home';hideSheet();topbar('','名詞偵探');
+  const best=k=>S.best[k]?`<span class="badge">${S.best[k]}</span>`:'';
+  show(`<section class="hero"><div class="mascot-wrap">${mascot('happy')}</div>
+      <div class="bubble">先認得<b>名詞</b>，才看得懂題目在問什麼。<br>看懂了，才知道要拿哪個<b>公式</b>。</div></section>
+    <h2 class="sec"><span class="step">第 1 步</span>名詞配對</h2>
+    <p class="sec-note">名詞、意思、例子，三個要能對起來。</p>
+    <div class="cards">${CH.map(c=>`<button class="gcard" data-c="${c.id}" style="--c:var(--${c.color});--cd:var(--${c.color}-d)">
+      <span class="gicon">${c.icon}</span><span class="gtext"><b>${c.name}</b><small>${c.sub}・${c.terms.length} 個名詞</small></span>${best(c.id)}</button>`).join('')}</div>
+    <h2 class="sec"><span class="step">第 2 步</span>看題目，選工具</h2>
+    <p class="sec-note">先不用算，只要說出這題該用哪個公式。</p>
+    <div class="cards">${STAGES.map(s=>`<button class="gcard" data-s="${s.id}" style="--c:var(--teal);--cd:var(--teal-d)">
+      <span class="gicon">${s.icon}</span><span class="gtext"><b>${s.name}</b><small>${s.tools.length} 選 1・${s.take||SC.filter(x=>s.tools.includes(x.t)).length} 題</small></span>${best(s.id)}</button>`).join('')}</div>
+    <h2 class="sec"><span class="step">第 3 步</span>看算式，選規則</h2>
+    <p class="sec-note">先不用算，只要認出這是哪一種算式、該用哪條規則。</p>
+    <div class="cards">${RULESETS.map(r=>`<button class="gcard" data-r="${r.id}" style="--c:var(--coral);--cd:var(--coral-d)">
+      <span class="gicon">${r.icon}</span><span class="gtext"><b>${r.name}</b><small>${r.sub}・${r.items.length} 題</small></span>${best(r.id)}</button>`).join('')}</div>
+    <button class="cbtn secondary" id="gloss">翻開全部名詞卡、工具卡和規則卡</button>
+    <details class="notes"><summary>給老師的使用說明</summary><ul>
+      <li><b>第 1 步</b>每個名詞會出一題，題型輪流出現：看名詞選例子、看例子選名詞、看意思選名詞。例子裡<b>黃色的部分</b>就是那個名詞指的東西，可以請他用手指指出來。</li>
+      <li>選錯時，畫面會告訴他「你選的那個名詞是什麼意思」，再讓他重選一次。容易搞混的名詞（例如底數和指數、因數和倍數、係數和常數項）會放在同一題當選項。</li>
+      <li><b>第 2 步</b>只選工具，不計算。選對之後，題目裡的<b>線索字</b>會被標黃，下面會寫出為什麼用這個工具。可以請他念出線索字，再自己說一次「看到＿＿，就用＿＿」。</li>
+      <li><b>第 3 步</b>只認算式、選規則，不計算。選對之後會出現完整算法，<b>每一步都寫出等號</b>，可以請他照著抄一次。正負數加減這一關要看的是「運算符號後面那個數」是正還是負。</li>
+      <li>每一關結束會列出「第一次就答對」的題數，和答錯過的名詞或題目，可以記進學習紀錄。</li>
+      <li>重新整理頁面，星星和紀錄會歸零。</li></ul></details>`);
+  screenEl.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{sTap();startTerms(b.dataset.c);});
+  screenEl.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{sTap();startScenes(b.dataset.s);});
+  screenEl.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{sTap();startScenes(b.dataset.r);});
+  $('#gloss').onclick=()=>{sTap();glossary();};
+}
+
+function glossary(){
+  S.screen='gloss';hideSheet();
+  topbar(`<button class="iconbtn" id="back" aria-label="回首頁">←</button>`,'名詞、工具、規則卡');
+  $('#back').onclick=()=>{sTap();home();};
+  show(CH.map(c=>`<section class="chap"><h3>${c.name}</h3>${c.terms.map(t=>termCard(t,c.color)).join('')}</section>`).join('')+
+    `<section class="chap"><h3>工具（公式）和線索字</h3>${Object.keys(TOOLS).map(k=>toolCard(k,true)).join('')}</section>`+
+    RULESETS.map(r=>`<section class="chap"><h3>規則：${r.name}</h3>${r.tools.map(k=>toolCard(k,false,r.T)).join('')}</section>`).join(''));
+}
+
+/* ================= 第 1 步：名詞配對 ================= */
+function startTerms(cid){
+  const c=CH.find(x=>x.id===cid);
+  const modes=['ex','term','def'],order=shuffle(c.terms);
+  S.kind='term';S.ref=c;S.i=0;S.firstOK=0;S.missed=[];
+  S.queue=order.map((t,k)=>{
+    const ok=x=>x!==t&&!(t.no||[]).includes(x.w)&&!(x.no||[]).includes(t.w);
+    const same=shuffle(c.terms.filter(x=>ok(x)&&x.g===t.g)),other=shuffle(c.terms.filter(x=>ok(x)&&x.g!==t.g));
+    return {t,mode:modes[k%3],opts:shuffle([t,...same.concat(other).slice(0,3)]),out:new Set(),wrong:false,done:false};
+  });
+  playTerm();
+}
+function frame(title){
+  topbar(`<button class="iconbtn" id="close" aria-label="回首頁">✕</button>`,`<div class="prog" aria-label="進度"><span style="width:${Math.max(4,Math.round(S.i/S.queue.length*100))}%"></span></div>`);
+  $('#close').onclick=()=>{sTap();home();};
+}
+function playTerm(){
+  const q=S.queue[S.i],c=S.ref,t=q.t;frame();
+  const head={
+    ex:`<span class="ask">哪一個例子裡，黃色的部分是——</span><span class="word">${t.w}</span>`,
+    term:`<span class="ask">黃色的部分，叫做什麼？</span><span class="exbig">${fmt(t.ex)}</span>`,
+    def:`<span class="ask">這句話在說哪個名詞？</span><span class="def">${t.d}</span>`}[q.mode];
+  const optHTML=o=>q.mode==='ex'?`<span class="ex">${fmt(o.ex)}</span>`:`<span class="w">${o.w}</span>`;
+  show(`<div class="qcard">${head}</div>
+    <div class="opts">${q.opts.map((o,i)=>`<button class="opt ${q.out.has(i)?'out':''} ${q.done&&o===t?'right':''}" data-i="${i}" ${q.out.has(i)||q.done?'disabled':''}><span class="lt">${LT[i]}</span>${optHTML(o)}</button>`).join('')}</div>`);
+  screenEl.querySelectorAll('.opt:not([disabled])').forEach(b=>b.onclick=()=>answerTerm(+b.dataset.i,b));
+  if(!q.done) sheet({title:'選一個',body:'<p>不確定的話，先猜一個，看看它是什麼意思。</p>',buttons:[{label:'看名詞卡',kind:'secondary',onClick:()=>sheet({title:`「${c.name}」的名詞卡`,body:c.terms.map(x=>termCard(x,c.color)).join(''),buttons:[{label:'回到題目',onClick:playTerm}]})}]});
+}
+function answerTerm(i,btn){
+  const q=S.queue[S.i],o=q.opts[i],c=S.ref;
+  if(o===q.t){
+    q.done=true;sYes();
+    if(!q.wrong){S.firstOK++;addStar();}
+    playTerm();
+    sheet({tone:'good',title:q.wrong?'對了！':'一次就答對！',body:termCard(q.t,c.color),buttons:[{label:S.i+1<S.queue.length?'下一題':'看結果',onClick:nextQ}]});
+  }else{
+    sNo();q.out.add(i);
+    if(!q.wrong){q.wrong=true;S.missed.push(q.t.w);}
+    playTerm();
+    const b=screenEl.querySelector(`.opt[data-i="${i}"]`);if(b){b.classList.add('shake');}
+    sheet({tone:'bad',title:'不是這個喔',body:`<p>你選的是「${o.w}」，它的意思是：</p>${termCard(o,'coral')}<p>再選一次。</p>`,buttons:[{label:'好，再選一次',onClick:()=>{sTap();playTerm();}}]});
+  }
+}
+
+/* ================= 第 2 步：看題目，選工具 ================= */
+function startScenes(sid){
+  const st=STAGES.find(x=>x.id===sid)||RULESETS.find(x=>x.id===sid);
+  let pool=shuffle(st.items||SC.filter(x=>st.tools.includes(x.t)));
+  if(st.take) pool=pool.slice(0,st.take);
+  S.kind='scene';S.ref=st;S.i=0;S.firstOK=0;S.missed=[];
+  S.queue=pool.map(sc=>({sc,out:new Set(),wrong:false,done:false}));
+  playScene();
+}
+function playScene(){
+  const q=S.queue[S.i],st=S.ref,D=st.T||TOOLS;frame();
+  const head=q.sc.e?`<span class="ask">這是哪一種算式？要用哪條規則？先不用算。</span><span class="exbig">${fmt(q.sc.e)}</span>`:`<span class="ask">這題要用哪個工具？先不用算。</span><div class="story">${fmtK(q.sc.s)}</div>`;
+  show(`<div class="qcard scene ${q.done?'reveal':''}">${head}</div>
+    <div class="opts">${st.tools.map((k,i)=>`<button class="opt ${q.out.has(k)?'out':''} ${q.done&&k===q.sc.t?'right':''}" data-k="${k}" ${q.out.has(k)||q.done?'disabled':''}><span class="lt">${LT[i]}</span><span class="tool">${D[k].n}<small>${fmt(D[k].f)}</small></span></button>`).join('')}</div>`);
+  screenEl.querySelectorAll('.opt:not([disabled])').forEach(b=>b.onclick=()=>answerScene(b.dataset.k));
+  if(!q.done) sheet(q.sc.e?{title:'先看清楚算式',body:'<p>看運算符號（＋ − × ÷），再看它後面的數是什麼樣子。</p>',buttons:[{label:'看規則卡',kind:'secondary',onClick:()=>sheet({title:'規則卡',body:st.tools.map(k=>toolCard(k,false,D)).join(''),buttons:[{label:'回到題目',onClick:playScene}]})}]}
+    :{title:'這題在問什麼？',body:'<p>先找出題目要你找的東西，再想：哪個工具是做這件事的？</p>',buttons:[{label:'看工具卡',kind:'secondary',onClick:()=>sheet({title:'工具卡',body:st.tools.map(k=>toolCard(k,false)).join(''),buttons:[{label:'回到題目',onClick:playScene}]})}]});
+}
+function answerScene(k){
+  const q=S.queue[S.i],D=S.ref.T||TOOLS;
+  if(k===q.sc.t){
+    q.done=true;sYes();
+    if(!q.wrong){S.firstOK++;addStar();}
+    playScene();
+    sheet({tone:'good',title:q.wrong?'對了！':'一次就答對！',body:q.sc.e?`<p>${fmt(q.sc.why)}</p><p>每一步都寫等號：</p><p class="work">${fmt(q.sc.work)}</p>${toolCard(k,false,D)}`:`<p>${fmt(q.sc.why)}</p><p>題目裡標黃的是<b>線索字</b>。這個工具常見的線索字：</p>${toolCard(k,true)}`,
+      buttons:[{label:S.i+1<S.queue.length?'下一題':'看結果',onClick:nextQ}]});
+  }else{
+    sNo();q.out.add(k);
+    if(!q.wrong){q.wrong=true;S.missed.push(q.sc.e?fmt(q.sc.e):q.sc.s.replace(/\[\[|\]\]/g,'').replace(/\{([^{}\/]+)\/([^{}]+)\}/g,'$1/$2').slice(0,14)+'…');}
+    playScene();
+    sheet({tone:'bad',title:'不是這個喔',body:`<p>你選的「${D[k].n}」：${D[k].use}</p><p>${q.sc.e?'這個算式是這樣嗎？再看一次。':'這題是在做這件事嗎？再看一次題目。'}</p>`,buttons:[{label:'好，再選一次',onClick:()=>{sTap();playScene();}}]});
+  }
+}
+
+function nextQ(){
+  sTap();
+  if(S.i+1<S.queue.length){S.i++;S.kind==='term'?playTerm():playScene();}
+  else done();
+}
+function done(){
+  hideSheet();sWin();
+  const n=S.queue.length,id=S.ref.id,name=S.ref.name;
+  const prev=S.best[id]?+S.best[id].split('/')[0]:-1;
+  if(S.firstOK>prev) S.best[id]=`${S.firstOK}/${n}`;
+  topbar(`<button class="iconbtn" id="close" aria-label="回首頁">✕</button>`,`<div class="prog"><span style="width:100%"></span></div>`);
+  $('#close').onclick=()=>{sTap();home();};
+  show(`<section class="donebox"><div class="mascot-wrap">${mascot('happy')}</div>
+    <h2>「${name}」完成！</h2><p>一次就答對 ${S.firstOK} ／ ${n} 題</p>
+    ${S.missed.length?`<div class="missed"><b>${S.kind==='term'?'答錯過的名詞':'答錯過的題目'}</b>${S.missed.map(m=>`<span>${m}</span>`).join('')}</div>`:''}
+    <div class="btncol"><button class="cbtn" id="again">再玩一次（題目順序會換）</button><button class="cbtn secondary" id="toHome">回首頁</button></div></section>`);
+  $('#again').onclick=()=>{sTap();S.kind==='term'?startTerms(id):startScenes(id);};
+  $('#toHome').onclick=()=>{sTap();home();};
+}
+
+home();
+}
+</script>
+</body></html>

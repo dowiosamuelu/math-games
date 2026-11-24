@@ -1,0 +1,804 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>數線走走看</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Noto+Sans+TC:wght@400;500;700;900&display=swap">
+<style>
+/* Layout: one column on graph paper; the number line board is the hero, the problem and its steps sit below it. */
+:root {
+  --paper: #f3f6fa;
+  --surface: #ffffff;
+  --ink: #16243a;
+  --muted: #5a6a80;
+  --grid: #e2e8f1;
+  --rule: #cfd8e4;
+  --line: #3b4b63;
+  --c1: #2563c9;
+  --c1-soft: #e4ecfb;
+  --c2: #c4501d;
+  --c2-soft: #fbeae1;
+  --good: #1d7f52;
+  --good-soft: #e1f3e9;
+  --bad: #b4342a;
+  --bad-soft: #fbe6e3;
+  --focus: #6a4fe0;
+  --font-ui: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --font-num: "Atkinson Hyperlegible", "Noto Sans TC", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0e1624; --surface: #162133; --ink: #e8eef7; --muted: #9fb0c6; --grid: #1a2638; --rule: #2b3a50;
+    --line: #aebcd0; --c1: #7aa7ff; --c1-soft: #1c2d4d; --c2: #ff9a62; --c2-soft: #3a2418;
+    --good: #5cc994; --good-soft: #163426; --bad: #ff8778; --bad-soft: #3d1d1a; --focus: #a58cff;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #0e1624; --surface: #162133; --ink: #e8eef7; --muted: #9fb0c6; --grid: #1a2638; --rule: #2b3a50;
+  --line: #aebcd0; --c1: #7aa7ff; --c1-soft: #1c2d4d; --c2: #ff9a62; --c2-soft: #3a2418;
+  --good: #5cc994; --good-soft: #163426; --bad: #ff8778; --bad-soft: #3d1d1a; --focus: #a58cff;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background-color: var(--paper);
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 24px 24px;
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: 16px;
+  line-height: 1.6;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 48px;
+}
+.wrap { max-width: 860px; margin: 0 auto; display: grid; gap: 20px; }
+
+header { display: grid; gap: 10px; }
+h1 { margin: 0; font-size: clamp(28px, 6vw, 40px); font-weight: 900; letter-spacing: 0.02em; text-wrap: balance; line-height: 1.2; }
+.rules { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.rules li { background: var(--surface); border: 1px solid var(--rule); border-radius: 999px; padding: 4px 12px; font-size: 15px; }
+.rules b { font-weight: 700; }
+.rules .flip { border-color: var(--ink); }
+
+.card { background: var(--surface); border: 1px solid var(--rule); border-radius: 16px; padding: 20px; display: grid; gap: 14px; min-width: 0; }
+
+/* Board */
+.task { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; }
+.step-no { font-size: 13px; letter-spacing: 0.08em; color: var(--muted); font-weight: 700; }
+.step-what { font-family: var(--font-num); font-size: 30px; font-weight: 700; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.step-what.k0 { color: var(--c1); }
+.step-what.k1 { color: var(--c2); }
+.step-ask { flex-basis: 100%; color: var(--muted); font-size: 15px; }
+
+.line-wrap { width: 100%; min-width: 0; }
+#nl { display: block; width: 100%; touch-action: pan-y; cursor: pointer; user-select: none; -webkit-user-select: none; }
+#nl:focus-visible { outline: 2px solid var(--focus); outline-offset: 4px; border-radius: 8px; }
+#nl .axis { stroke: var(--line); stroke-width: 1.5; }
+#nl .axis-head { fill: var(--line); }
+#nl .tick { stroke: var(--line); stroke-width: 1.25; }
+#nl .tick.zero { stroke-width: 2.5; }
+#nl .tl { fill: var(--muted); font-family: var(--font-num); font-size: 13px; text-anchor: middle; }
+#nl .tl.zero { fill: var(--ink); font-weight: 700; }
+#nl .tl.cur { fill: var(--surface); font-weight: 700; }
+#nl .pill { fill: var(--ink); }
+#nl .hop { fill: none; stroke-width: 2.5; stroke-linecap: round; }
+#nl .hop.live { stroke-dasharray: 6 5; }
+#nl .k0.hop { stroke: var(--c1); }
+#nl .k1.hop { stroke: var(--c2); }
+#nl .k0.fillk { fill: var(--c1); }
+#nl .k1.fillk { fill: var(--c2); }
+#nl .hl { font-family: var(--font-ui); font-size: 13px; font-weight: 700; text-anchor: middle; }
+#nl .hl-bg { fill: var(--surface); }
+#nl .ring { fill: var(--surface); stroke: var(--muted); stroke-width: 2; }
+#nl .mk { fill: var(--ink); stroke: var(--surface); stroke-width: 3; }
+#marker { transition: transform 0.16s ease-out; }
+.noanim #marker { transition: none; }
+
+.readout { font-family: var(--font-num); font-size: 15px; color: var(--muted); font-variant-numeric: tabular-nums; min-height: 1.6em; }
+.readout b { color: var(--ink); }
+
+.controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.controls .wide { grid-column: span 1; }
+@media (min-width: 620px) { .controls { grid-template-columns: 1fr 1fr auto auto; } }
+
+.btn {
+  font: inherit; font-size: 16px; font-weight: 700; color: var(--ink);
+  background: var(--surface); border: 1.5px solid var(--rule); border-radius: 12px;
+  padding: 10px 16px; cursor: pointer; min-height: 48px;
+  transition: background-color 0.12s, border-color 0.12s, transform 0.06s;
+}
+.btn:hover:not(:disabled) { border-color: var(--line); }
+.btn:active:not(:disabled) { transform: translateY(1px); }
+.btn:focus-visible, input:focus-visible, .seg input:focus-visible + span { outline: 2px solid var(--focus); outline-offset: 2px; }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn.move { font-size: 18px; }
+.btn.primary { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.btn.ghost { font-weight: 500; }
+.hint { margin: 0; font-size: 13px; color: var(--muted); }
+
+.fb { margin: 0; padding: 10px 14px; border-radius: 12px; font-size: 16px; min-height: 0; }
+.fb:empty { display: none; }
+.fb.good { background: var(--good-soft); color: var(--good); }
+.fb.bad { background: var(--bad-soft); color: var(--bad); }
+.fb.info { background: var(--c1-soft); color: var(--ink); }
+.fb b { font-weight: 700; }
+
+/* Problem */
+.prob-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; }
+h2 { margin: 0; font-size: 20px; font-weight: 700; }
+.seg { display: inline-flex; border: 1.5px solid var(--rule); border-radius: 12px; overflow: hidden; }
+.seg label { position: relative; }
+.seg input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.seg span { display: block; padding: 8px 14px; font-size: 15px; cursor: pointer; }
+.seg label + label span { border-left: 1.5px solid var(--rule); }
+.seg input:checked + span { background: var(--ink); color: var(--surface); font-weight: 700; }
+.seg-wrap { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--muted); flex-wrap: wrap; }
+
+.expr { font-family: var(--font-num); font-size: clamp(30px, 8vw, 44px); font-weight: 700; line-height: 1.3; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; font-variant-numeric: tabular-nums; }
+.term { display: inline-flex; align-items: center; gap: 8px; padding: 2px 6px; border-radius: 10px; border-bottom: 3px solid transparent; }
+.term.now { background: var(--paper); border-bottom-color: currentColor; }
+.term.k0 { color: var(--c1); }
+.term.k1 { color: var(--c2); }
+.term.todo { opacity: 0.55; }
+.op { display: inline-grid; place-items: center; width: 1.1em; height: 1.1em; border: 2px solid currentColor; border-radius: 6px; font-size: 0.8em; line-height: 1; }
+.eq { color: var(--muted); font-weight: 400; }
+.res { color: var(--good); }
+.legend { margin: 0; font-size: 14px; color: var(--muted); }
+.legend .op { font-family: var(--font-num); color: var(--ink); font-size: 13px; width: 20px; height: 20px; vertical-align: -4px; margin-right: 6px; }
+@media (max-width: 480px) {
+  .card { padding: 16px 12px; border-radius: 14px; }
+  .step-what { font-size: 26px; }
+}
+
+.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.steps li { display: grid; grid-template-columns: 28px 1fr; gap: 10px; align-items: start; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--rule); }
+.steps li.now { border-color: var(--ink); }
+.steps li.todo { color: var(--muted); }
+.steps .badge { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-family: var(--font-num); font-weight: 700; font-size: 14px; border: 1.5px solid currentColor; }
+.steps li.done .badge { background: var(--good); border-color: var(--good); color: var(--surface); }
+.steps .s-title { font-family: var(--font-num); font-weight: 700; font-size: 17px; }
+.steps .s-title .tag { font-family: var(--font-ui); font-weight: 500; font-size: 13px; color: var(--muted); margin-left: 6px; }
+.steps .s-detail { font-size: 14px; color: var(--muted); }
+.steps li.done .s-detail { color: var(--ink); }
+.steps .k0 .s-title { color: var(--c1); }
+.steps .k1 .s-title { color: var(--c2); }
+.steps li > div { min-width: 0; }
+
+.answer { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; border-top: 1px dashed var(--rule); padding-top: 14px; }
+.answer label { font-weight: 700; }
+.answer input {
+  font-family: var(--font-num); font-size: 22px; font-weight: 700; width: 6.5em; padding: 8px 12px; min-height: 48px;
+  border: 1.5px solid var(--rule); border-radius: 12px; background: var(--paper); color: var(--ink);
+}
+.answer .fb { flex-basis: 100%; }
+.foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.tally { margin: 0; font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+/* Sound & light aids */
+.title-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; }
+.sound { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px 14px; font-weight: 500; }
+.sound svg { width: 22px; height: 22px; flex: none; }
+.sound svg path, .sound svg polygon { stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.sound svg polygon { fill: currentColor; }
+.sound[aria-pressed="false"] { color: var(--muted); }
+.sound svg [hidden] { display: none; }
+
+.rules li { transition: background-color 0.2s, border-color 0.2s, box-shadow 0.2s; }
+.rules li.lit { background: var(--c1-soft); border-color: var(--c1); box-shadow: 0 0 0 2px var(--c1-soft); }
+.rules.k1 li.lit { background: var(--c2-soft); border-color: var(--c2); box-shadow: 0 0 0 2px var(--c2-soft); }
+.rules li.nudge { animation: nudge 0.45s ease 2; }
+@keyframes nudge { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+.readout .k0 { color: var(--c1); }
+.readout .k1 { color: var(--c2); }
+
+#nl .mk { transform-box: fill-box; transform-origin: center; }
+#nl .mk.bump { animation: bump 0.22s ease-out; }
+@keyframes bump { 0% { transform: scale(1); } 40% { transform: scale(1.4); } 100% { transform: scale(1); } }
+#mkInner.shake { animation: shake 0.42s ease; }
+@keyframes shake { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-7px); } 40% { transform: translateX(7px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(4px); } }
+#nl .draw { stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw 0.5s ease-out forwards; }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+#nl .fadein { opacity: 0; animation: fadein 0.25s ease-out 0.4s forwards; }
+@keyframes fadein { to { opacity: 1; } }
+#nl .pulse { fill: none; stroke-width: 3; transform-box: fill-box; transform-origin: center; animation: pulse 0.65s ease-out forwards; }
+#nl .pulse.good { stroke: var(--good); }
+#nl .pulse.bad { stroke: var(--bad); }
+@keyframes pulse { from { transform: scale(0.7); opacity: 1; } to { transform: scale(2.8); opacity: 0; } }
+.res.pop { display: inline-block; animation: pop 0.5s ease; }
+@keyframes pop { 0% { transform: scale(0.5); } 60% { transform: scale(1.25); } 100% { transform: scale(1); } }
+.answer input.shake { animation: shake 0.42s ease; }
+.fb.flash { animation: flash 0.5s ease; }
+@keyframes flash { from { filter: brightness(1.25); transform: translateY(-2px); } to { filter: none; transform: none; } }
+#fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 50; }
+
+@media (prefers-reduced-motion: reduce) {
+  #marker, .btn, .rules li { transition: none; }
+  #nl .mk.bump, #mkInner.shake, .rules li.nudge, .res.pop, .answer input.shake, .fb.flash { animation: none; }
+  #nl .draw { animation-duration: 0.01s; }
+  #nl .fadein { animation-delay: 0s; animation-duration: 0.01s; }
+}
+</style>
+
+<main class="wrap">
+  <header>
+    <div class="title-row">
+      <h1>數線走走看</h1>
+      <button class="btn ghost sound" id="btnSound" type="button" aria-pressed="true">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <polygon points="4,9 8,9 13,5 13,19 8,15 4,15"></polygon>
+          <path class="waves" d="M16.5 9.5a3.5 3.5 0 0 1 0 5M19 7a7 7 0 0 1 0 10"></path>
+          <path class="mute" d="M17 9.5l5 5M22 9.5l-5 5" hidden></path>
+        </svg>
+        <span class="lbl">聲音：開</span>
+      </button>
+    </div>
+    <ul class="rules" id="rules" aria-label="走法規則">
+      <li id="ruleAdd"><b>加</b>：往右走</li>
+      <li id="ruleSub"><b>減</b>：往左走</li>
+      <li id="ruleNeg" class="flip">遇到<b>負數</b>：方向反過來</li>
+    </ul>
+  </header>
+
+  <section class="card" aria-label="數線">
+    <div class="task" id="task"></div>
+    <div class="line-wrap" id="lineWrap">
+      <svg id="nl" tabindex="0" role="slider" aria-valuemin="-10" aria-valuemax="10" aria-valuenow="0" aria-label="數線上目前的位置">
+        <g id="layer"></g>
+        <g id="marker"><g id="mkInner"><circle class="mk" r="10" cx="0" cy="0"></circle></g></g>
+      </svg>
+    </div>
+    <div class="readout" id="readout"></div>
+    <div class="controls">
+      <button class="btn move" id="btnLeft" type="button">← 往左一格</button>
+      <button class="btn move" id="btnRight" type="button">往右一格 →</button>
+      <button class="btn ghost" id="btnRedo" type="button">重走這一步</button>
+      <button class="btn primary" id="btnOk" type="button">完成這一步</button>
+    </div>
+    <p class="hint">每走一格會有聲音：往右越走越高，往左越走越低。上面亮起來的規則，就是這一步要用的。也可以直接在數線上點一下或拖曳；用鍵盤時，← → 移動，Enter 完成這一步。</p>
+    <p class="fb" id="feedback" aria-live="polite"></p>
+  </section>
+
+  <section class="card" aria-label="題目">
+    <div class="prob-head">
+      <h2>題目</h2>
+      <div class="seg-wrap">
+        <span id="segLabel">幾項：</span>
+        <div class="seg" role="radiogroup" aria-labelledby="segLabel">
+          <label><input type="radio" name="terms" id="t2" value="2"><span>兩項</span></label>
+          <label><input type="radio" name="terms" id="t3" value="3"><span>三項</span></label>
+          <label><input type="radio" name="terms" id="tr" value="random"><span>隨機</span></label>
+        </div>
+      </div>
+    </div>
+    <div class="expr" id="expr" aria-live="polite"></div>
+    <p class="legend"><span class="op" aria-hidden="true">−</span>方框裡是加、減（動作）；括號裡的 − 是負號（比 0 小的數）。</p>
+    <ol class="steps" id="steps"></ol>
+    <form class="answer" id="ansForm" autocomplete="off">
+      <label for="ans">直接寫答案</label>
+      <input id="ans" name="ans" type="text" inputmode="text" placeholder="例如 −3" aria-describedby="ansFb">
+      <button class="btn" type="submit">檢查</button>
+      <p class="fb" id="ansFb" aria-live="polite"></p>
+    </form>
+    <div class="foot">
+      <p class="tally" id="tally">還沒有完成的題目</p>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <button class="btn ghost" id="btnDemo" type="button">看示範</button>
+        <button class="btn" id="btnNew" type="button">換一題</button>
+      </div>
+    </div>
+  </section>
+</main>
+<canvas id="fx" hidden aria-hidden="true"></canvas>
+
+<script>
+(() => {
+  const MIN = -10, MAX = 10;
+  const RM = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const $ = s => document.querySelector(s);
+
+  // ---------- sound ----------
+  let soundOn = true;
+  try { soundOn = localStorage.getItem('nl-sound') !== 'off'; } catch (e) {}
+  let actx = null;
+  function ac() {
+    if (!soundOn) return null;
+    if (!actx) {
+      const C = window.AudioContext || window.webkitAudioContext;
+      if (!C) return null;
+      try { actx = new C(); } catch (e) { return null; }
+    }
+    if (actx.state === 'suspended') actx.resume();
+    return actx;
+  }
+  function tone(freq, start, dur, type, vol) {
+    const a = ac(); if (!a) return;
+    const t = a.currentTime + start;
+    const o = a.createOscillator(), g = a.createGain();
+    o.type = type || 'sine';
+    o.frequency.setValueAtTime(freq, t);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol || 0.15, t + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(a.destination);
+    o.start(t); o.stop(t + dur + 0.03);
+  }
+  // Position → pitch on a major scale: −10 is the lowest note, 10 the highest.
+  const SCALE = [0, 2, 4, 5, 7, 9, 11];
+  const pitchOf = pos => { const d = pos + 10; return 196 * Math.pow(2, (12 * Math.floor(d / 7) + SCALE[d % 7]) / 12); };
+  const sMove = pos => tone(pitchOf(pos), 0, 0.14, 'triangle', 0.16);
+  const sEdge = () => tone(110, 0, 0.12, 'sine', 0.12);
+  const sGood = () => { tone(660, 0, 0.14, 'sine', 0.16); tone(990, 0.1, 0.22, 'sine', 0.14); };
+  const sBad = () => { tone(233, 0, 0.18, 'square', 0.05); tone(196, 0.14, 0.26, 'square', 0.05); };
+  const sInfo = () => tone(523, 0, 0.12, 'sine', 0.1);
+  const sDone = () => [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => tone(f, 0.12 + i * 0.1, i === 3 ? 0.5 : 0.18, 'triangle', 0.16));
+
+  // ---------- light ----------
+  function restart(el, cls) { if (!el) return; el.classList.remove(cls); void el.getBoundingClientRect(); el.classList.add(cls); }
+  const bump = () => restart(document.querySelector('#nl .mk'), 'bump');
+  const shake = () => restart($('#mkInner'), 'shake');
+  function nudgeRules() { document.querySelectorAll('#rules li.lit').forEach(li => restart(li, 'nudge')); }
+  function confettiFrom(el, n) {
+    if (RM || !el) return;
+    const cv = $('#fx'), ctx = cv.getContext('2d');
+    const W = window.innerWidth, H = window.innerHeight, dpr = window.devicePixelRatio || 1;
+    cv.hidden = false; cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const r = el.getBoundingClientRect();
+    const ox = r.left + r.width / 2, oy = r.top + r.height / 2;
+    const cs = getComputedStyle(document.documentElement);
+    const cols = ['--c1', '--c2', '--good', '--focus'].map(v => cs.getPropertyValue(v).trim());
+    const ps = Array.from({ length: n || 120 }, () => {
+      const ang = -Math.PI / 2 + (Math.random() - 0.5) * 2.2, sp = 5 + Math.random() * 9;
+      return { x: ox, y: oy, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp, r: Math.random() * 6, vr: (Math.random() - 0.5) * 0.4,
+        w: 6 + Math.random() * 6, h: 3 + Math.random() * 4, c: cols[Math.floor(Math.random() * cols.length)] };
+    });
+    const t0 = performance.now(), life = 1700;
+    (function frame(t) {
+      const el2 = t - t0;
+      ctx.clearRect(0, 0, W, H);
+      ps.forEach(p => {
+        p.vy += 0.32; p.vx *= 0.99; p.x += p.vx; p.y += p.vy; p.r += p.vr;
+        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r);
+        ctx.globalAlpha = Math.max(0, 1 - el2 / life);
+        ctx.fillStyle = p.c; ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h); ctx.restore();
+      });
+      if (el2 < life) requestAnimationFrame(frame); else { ctx.clearRect(0, 0, W, H); cv.hidden = true; }
+    })(t0);
+  }
+
+  // ---------- numbers & words ----------
+  const fmt = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const paren = n => (n < 0 ? '(−' + Math.abs(n) + ')' : String(n));
+  const dirWord = d => (d > 0 ? '往右' : '往左');
+  const deltaOf = t => (t.op === '+' ? t.val : -t.val);
+
+  function ruleText(t) {
+    const m = Math.abs(t.val);
+    if (t.op === '+' && t.val > 0) return `加 ${m}：往右 ${m} 格`;
+    if (t.op === '+' && t.val < 0) return `加 ${m} 是往右；加 (−${m}) 是負數，方向反過來，往左 ${m} 格`;
+    if (t.op === '-' && t.val > 0) return `減 ${m}：往左 ${m} 格`;
+    return `減 ${m} 是往左；減 (−${m}) 是負數，方向反過來，往右 ${m} 格`;
+  }
+  function startText(a) {
+    return `起點 ${fmt(a)}：${a < 0 ? '負數在 0 的左邊' : '正數在 0 的右邊'}，從 0 數 ${Math.abs(a)} 格`;
+  }
+
+  // ---------- problem generator ----------
+  const rint = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+  const nz = () => { let v = 0; while (v === 0) v = rint(-9, 9); return v; };
+  let lastKey = '';
+  function gen(n) {
+    const wantNegStep = Math.random() < 0.8;
+    for (let tries = 0; tries < 2000; tries++) {
+      const a = nz();
+      const terms = [{ op: null, val: a }];
+      let p = a, ok = true;
+      for (let i = 1; i < n; i++) {
+        const t = { op: Math.random() < 0.5 ? '+' : '-', val: nz() };
+        p += deltaOf(t);
+        if (p < MIN || p > MAX) { ok = false; break; }
+        terms.push(t);
+      }
+      if (!ok) continue;
+      if (!terms.some(t => t.val < 0)) continue;
+      if (wantNegStep && !terms.slice(1).some(t => t.val < 0)) continue;
+      const key = terms.map(t => (t.op || '') + t.val).join(',');
+      if (key === lastKey) continue;
+      lastKey = key;
+      return terms;
+    }
+    return [{ op: null, val: 3 }, { op: '-', val: -5 }];
+  }
+  const partials = terms => { const out = []; let p = 0; terms.forEach((t, i) => { p = i === 0 ? t.val : p + deltaOf(t); out.push(p); }); return out; };
+
+  // ---------- state ----------
+  let pref = 'random';
+  try { pref = localStorage.getItem('nl-terms') || 'random'; } catch (e) {}
+  let st;
+  let demoToken = 0;
+  const tally = { done: 0, demo: 0 };
+  let geo = { pad: 24, sp: 20, yL: 126 };
+
+  function fresh(terms) {
+    return { terms, P: partials(terms), step: 0, pos: 0, stepStart: 0, hops: [], done: false, busy: false, usedDemo: false, counted: false, solvedByAnswer: false };
+  }
+  function newProblem() {
+    demoToken++;
+    const n = pref === 'random' ? (Math.random() < 0.5 ? 2 : 3) : Number(pref);
+    st = fresh(gen(n));
+    setFb('', '');
+    $('#ans').value = '';
+    setAnsFb('', '');
+    renderAll();
+  }
+  const termK = i => (i - 1) % 2; // color index for step i (i >= 1)
+
+  // ---------- actions ----------
+  function setPos(v) {
+    if (st.done || st.busy) return;
+    const nv = Math.max(MIN, Math.min(MAX, v));
+    if (nv === st.pos) { if (nv !== v) sEdge(); return; }
+    st.pos = nv;
+    sMove(nv);
+    renderLine(); renderReadout();
+    bump();
+  }
+  function redoStep() {
+    if (st.done || st.busy) return;
+    st.pos = st.stepStart;
+    setFb('', '');
+    renderLine(); renderReadout();
+  }
+  function commitStep() {
+    st.fx = 'good';
+    if (st.step > 0) st.hops.push({ from: st.stepStart, to: st.pos, k: termK(st.step), t: st.terms[st.step], fresh: true });
+    st.stepStart = st.pos;
+    st.step++;
+    if (st.step >= st.terms.length) {
+      st.done = true;
+      countIt();
+    }
+  }
+  function checkStep() {
+    if (st.busy) return;
+    if (st.done) { newProblem(); return; }
+    const i = st.step, target = st.P[i];
+    if (i === 0) {
+      if (st.pos === target) {
+        setFb('good', `<b>對了！</b>${startText(target)}。`);
+        commitStep(); renderAll(); sGood();
+      } else {
+        setFb('bad', `還不是起點。${startText(target)}。`);
+        wrong();
+      }
+      return;
+    }
+    const t = st.terms[i];
+    const want = deltaOf(t), moved = st.pos - st.stepStart;
+    if (moved === want) {
+      const msg = `<b>對了！</b>${ruleText(t)}，${fmt(st.stepStart)} → ${fmt(st.pos)}。`;
+      commitStep();
+      if (st.done) setFb('good', `${msg}<br>走完了，答案是 <b>${fmt(st.pos)}</b>。按「下一題」繼續。`);
+      else setFb('good', msg);
+      renderAll();
+      if (st.done) { sDone(); requestAnimationFrame(() => confettiFrom($('#marker'), 140)); }
+      else sGood();
+    } else if (moved === 0) {
+      setFb('info', `還沒走喔。先看上面亮起來的規則，決定往哪邊，再走幾格。`);
+      sInfo(); nudgeRules();
+    } else if (Math.sign(moved) !== Math.sign(want)) {
+      setFb('bad', `<b>方向反了。</b>${ruleText(t)}。按「重走這一步」再試一次。`);
+      wrong(); nudgeRules();
+    } else {
+      setFb('bad', `方向對了，格數再數一次：要走 ${Math.abs(want)} 格，你走了 ${Math.abs(moved)} 格。`);
+      wrong();
+    }
+  }
+  function wrong() {
+    sBad();
+    st.fx = 'bad';
+    renderLine();
+    shake();
+  }
+  function countIt() {
+    if (st.counted) return;
+    st.counted = true;
+    tally.done++;
+    if (st.usedDemo) tally.demo++;
+    renderTally();
+  }
+
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  async function runDemo() {
+    const token = ++demoToken;
+    const terms = st.terms;
+    const keepCount = st.counted, keepAns = st.solvedByAnswer;
+    st = fresh(terms);
+    st.usedDemo = true; st.busy = true; st.counted = keepCount; st.solvedByAnswer = keepAns;
+    setFb('info', '示範開始：先找起點。');
+    renderAll();
+    const unit = RM ? 0 : 200;
+    for (let i = 0; i < terms.length; i++) {
+      await sleep(RM ? 500 : 450);
+      if (token !== demoToken) return;
+      const target = st.P[i];
+      if (unit === 0) { st.pos = target; sMove(target); renderLine(); renderReadout(); }
+      while (st.pos !== target) {
+        st.pos += Math.sign(target - st.pos);
+        sMove(st.pos);
+        renderLine(); renderReadout(); bump();
+        await sleep(unit);
+        if (token !== demoToken) return;
+      }
+      const msg = i === 0 ? `${startText(target)}。` : `${ruleText(terms[i])}，${fmt(st.stepStart)} → ${fmt(target)}。`;
+      commitStep();
+      setFb('info', st.done ? `${msg}<br>停在 <b>${fmt(st.pos)}</b>，所以答案是 ${fmt(st.pos)}。` : msg);
+      renderAll();
+      if (st.done) sDone(); else sGood();
+      await sleep(RM ? 900 : 1100);
+      if (token !== demoToken) return;
+    }
+    st.busy = false;
+    renderAll();
+  }
+
+  function parseAns(s) {
+    const clean = s.trim().replace(/[−–—﹣－]/g, '-').replace(/\s+/g, '').replace(/^\((.*)\)$/, '$1');
+    if (!/^[-+]?\d+$/.test(clean)) return null;
+    return Number(clean);
+  }
+  function checkAnswer(e) {
+    e.preventDefault();
+    const v = parseAns($('#ans').value);
+    const ans = st.P[st.P.length - 1];
+    if (v === null) { setAnsFb('bad', '請寫一個整數，負數前面加 −，例如 −3。'); sInfo(); restart($('#ans'), 'shake'); return; }
+    if (v === ans) {
+      const first = !st.solvedByAnswer;
+      st.solvedByAnswer = true;
+      st.popRes = true;
+      setAnsFb('good', `<b>答對了！</b>答案是 ${fmt(ans)}。${st.done ? '' : '想確認的話，可以在上面的數線走一次。'}`);
+      countIt();
+      renderExpr();
+      sDone();
+      if (first) requestAnimationFrame(() => confettiFrom(document.querySelector('#expr .res'), 90));
+    } else {
+      const sameSize = Math.abs(v) === Math.abs(ans);
+      setAnsFb('bad', sameSize
+        ? `差一點：數字對了，正負號再想一次。可以在上面的數線一步一步走走看。`
+        : `還不對。可以在上面的數線一步一步走走看，或按「看示範」。`);
+      sBad();
+      restart($('#ans'), 'shake');
+    }
+  }
+
+  // ---------- rendering ----------
+  function setFb(kind, html) { const el = $('#feedback'); el.className = 'fb' + (kind ? ' ' + kind : ''); el.innerHTML = html; if (html) restart(el, 'flash'); }
+  function setAnsFb(kind, html) { const el = $('#ansFb'); el.className = 'fb' + (kind ? ' ' + kind : ''); el.innerHTML = html; if (html) restart(el, 'flash'); }
+
+  function renderRules() {
+    const lit = { ruleAdd: false, ruleSub: false, ruleNeg: false };
+    let k = 0;
+    if (!st.done && st.step > 0) {
+      const t = st.terms[st.step];
+      k = termK(st.step);
+      lit[t.op === '+' ? 'ruleAdd' : 'ruleSub'] = true;
+      if (t.val < 0) lit.ruleNeg = true;
+    }
+    Object.keys(lit).forEach(id => $('#' + id).classList.toggle('lit', lit[id]));
+    $('#rules').classList.toggle('k1', k === 1);
+  }
+
+  function renderSound() {
+    const b = $('#btnSound');
+    b.setAttribute('aria-pressed', String(soundOn));
+    b.querySelector('.lbl').textContent = soundOn ? '聲音：開' : '聲音：關';
+    b.querySelector('.waves').toggleAttribute('hidden', !soundOn);
+    b.querySelector('.mute').toggleAttribute('hidden', soundOn);
+  }
+
+  function renderTask() {
+    const el = $('#task');
+    const n = st.terms.length;
+    if (st.done) {
+      el.innerHTML = `<span class="step-no">完成</span><span class="step-what">答案是 ${fmt(st.pos)}</span><span class="step-ask">看看數線上的箭頭：每一段都照著算式走。</span>`;
+      return;
+    }
+    const i = st.step;
+    if (i === 0) {
+      el.innerHTML = `<span class="step-no">第 1 步（共 ${n} 步）</span><span class="step-what">起點 ${fmt(st.terms[0].val)}</span><span class="step-ask">把黑點移到起點。</span>`;
+      return;
+    }
+    const t = st.terms[i];
+    el.innerHTML = `<span class="step-no">第 ${i + 1} 步（共 ${n} 步）</span><span class="step-what k${termK(i)}">${t.op === '+' ? '+' : '−'} ${paren(t.val)}</span><span class="step-ask">從 ${fmt(st.stepStart)} 出發：${t.op === '+' ? '加' : '減'}是往哪邊？後面的數是正的還是負的？</span>`;
+  }
+
+  function renderExpr() {
+    const parts = st.terms.map((t, i) => {
+      const state = st.done ? 'done' : i < st.step ? 'done' : i === st.step ? 'now' : 'todo';
+      if (i === 0) return `<span class="term ${state}">${paren(t.val)}</span>`;
+      const k = termK(i);
+      return `<span class="term k${k} ${state}"><span class="op" aria-label="${t.op === '+' ? '加' : '減'}">${t.op === '+' ? '+' : '−'}</span><span>${paren(t.val)}</span></span>`;
+    });
+    if (st.done || st.solvedByAnswer) parts.push(`<span class="eq">=</span><span class="res${st.popRes ? ' pop' : ''}">${fmt(st.P[st.P.length - 1])}</span>`);
+    st.popRes = false;
+    $('#expr').innerHTML = parts.join('');
+  }
+
+  function renderSteps() {
+    $('#steps').innerHTML = st.terms.map((t, i) => {
+      const state = i < st.step ? 'done' : i === st.step && !st.done ? 'now' : 'todo';
+      const k = i === 0 ? '' : 'k' + termK(i);
+      const title = i === 0 ? `起點 ${fmt(t.val)}` : `${t.op === '+' ? '+' : '−'} ${paren(t.val)}`;
+      let detail;
+      if (state === 'done') {
+        if (i === 0) detail = startText(t.val);
+        else { const h = st.hops[i - 1]; detail = `${ruleText(t)}：${fmt(h.from)} → ${fmt(h.to)}`; }
+      } else if (state === 'now') detail = '正在走這一步';
+      else detail = '還沒走到';
+      const tag = state === 'now' ? '<span class="tag">進行中</span>' : '';
+      return `<li class="${state} ${k}"><span class="badge">${state === 'done' ? '✓' : i + 1}</span><div><div class="s-title">${title}${tag}</div><div class="s-detail">${detail}</div></div></li>`;
+    }).join('');
+  }
+
+  function renderReadout() {
+    let s = `目前在 <b>${fmt(st.pos)}</b>`;
+    if (!st.done && st.step > 0) {
+      const d = st.pos - st.stepStart;
+      s += `　這一步：${d === 0 ? '還沒移動' : `<span class="k${termK(st.step)}">${dirWord(d)} <b class="k${termK(st.step)}">${Math.abs(d)}</b> 格</span>`}`;
+    }
+    $('#readout').innerHTML = s;
+    $('#nl').setAttribute('aria-valuenow', st.pos);
+    $('#nl').setAttribute('aria-valuetext', fmt(st.pos));
+  }
+
+  function renderButtons() {
+    const lock = st.busy;
+    $('#btnLeft').disabled = lock || st.done;
+    $('#btnRight').disabled = lock || st.done;
+    $('#btnRedo').disabled = lock || st.done;
+    $('#btnOk').disabled = lock;
+    $('#btnOk').textContent = st.done ? '下一題' : '完成這一步';
+    $('#btnDemo').disabled = lock;
+  }
+
+  function renderTally() {
+    $('#tally').textContent = tally.done === 0 ? '還沒有完成的題目'
+      : `已完成 ${tally.done} 題` + (tally.demo ? `（其中 ${tally.demo} 題看過示範）` : '');
+  }
+
+  function hopSVG(from, to, k, live, fresh) {
+    const { pad, sp, yL } = geo;
+    const X = v => pad + (v - MIN) * sp;
+    const x1 = X(from), x2 = X(to);
+    const h = 52 + 34 * k;
+    const yEnd = yL - 13;
+    const d = `M${x1} ${yL - 4} C${x1} ${yL - h}, ${x2} ${yL - h}, ${x2} ${yEnd}`;
+    const head = `${x2 - 5.5},${yEnd - 10} ${x2 + 5.5},${yEnd - 10} ${x2},${yEnd}`;
+    const label = `${dirWord(to - from)} ${Math.abs(to - from)}`;
+    const ly = yL - 0.75 * h - 8;
+    const lx = (x1 + x2) / 2;
+    const w = label.length * 9 + 10;
+    const fi = fresh ? ' fadein' : '';
+    return `<path class="hop k${k}${live ? ' live' : ''}${fresh ? ' draw' : ''}" d="${d}"${fresh ? ' pathLength="1"' : ''}/>`
+      + `<polygon class="fillk k${k}${fi}" points="${head}"/>`
+      + `<rect class="hl-bg${fi}" x="${lx - w / 2}" y="${ly - 14}" width="${w}" height="19" rx="4"/>`
+      + `<text class="hl fillk k${k}${fi}" x="${lx}" y="${ly}">${label}</text>`;
+  }
+
+  function renderLine() {
+    const wrap = $('#lineWrap');
+    const W = Math.max(280, wrap.clientWidth);
+    const H = 176, pad = W < 420 ? 18 : 24, yL = 126;
+    const sp = (W - 2 * pad) / (MAX - MIN);
+    geo = { pad, sp, yL };
+    const X = v => pad + (v - MIN) * sp;
+    const svg = $('#nl');
+    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    svg.setAttribute('height', H);
+    let s = '';
+    // axis with arrowheads at both ends
+    s += `<line class="axis" x1="${X(MIN) - 14}" x2="${X(MAX) + 14}" y1="${yL}" y2="${yL}"/>`;
+    s += `<polygon class="axis-head" points="${X(MAX) + 20},${yL} ${X(MAX) + 11},${yL - 5} ${X(MAX) + 11},${yL + 5}"/>`;
+    s += `<polygon class="axis-head" points="${X(MIN) - 20},${yL} ${X(MIN) - 11},${yL - 5} ${X(MIN) - 11},${yL + 5}"/>`;
+    const every = sp >= 27 ? 1 : 2;
+    for (let v = MIN; v <= MAX; v++) {
+      const x = X(v);
+      s += `<line class="tick${v === 0 ? ' zero' : ''}" x1="${x}" x2="${x}" y1="${yL - 7}" y2="${yL + 7}"/>`;
+      const isCur = v === st.pos;
+      const nearCur = every === 2 && Math.abs(v - st.pos) === 1 && st.pos % 2 !== 0;
+      if (isCur) {
+        const label = fmt(v), w = label.length * 8 + 14;
+        s += `<rect class="pill" x="${x - w / 2}" y="${yL + 14}" width="${w}" height="22" rx="11"/>`;
+        s += `<text class="tl cur" x="${x}" y="${yL + 30}">${label}</text>`;
+      } else if ((v % every === 0 || v === 0) && !nearCur) {
+        s += `<text class="tl${v === 0 ? ' zero' : ''}" x="${x}" y="${yL + 30}">${fmt(v)}</text>`;
+      }
+    }
+    // finished hops, then the one being walked
+    st.hops.forEach(h => { s += hopSVG(h.from, h.to, h.k, false, h.fresh); h.fresh = false; });
+    if (!st.done && st.step > 0) {
+      if (st.pos !== st.stepStart) s += hopSVG(st.stepStart, st.pos, termK(st.step), true, false);
+      s += `<circle class="ring" cx="${X(st.stepStart)}" cy="${yL}" r="7"/>`;
+    }
+    if (st.fx) { s += `<circle class="pulse ${st.fx}" cx="${X(st.pos)}" cy="${yL}" r="12"/>`; st.fx = null; }
+    $('#layer').innerHTML = s;
+    $('#marker').style.transform = `translate(${X(st.pos)}px, ${yL}px)`;
+  }
+
+  function renderAll() {
+    renderTask(); renderRules(); renderLine(); renderReadout(); renderExpr(); renderSteps(); renderButtons(); renderTally();
+  }
+
+  // ---------- input ----------
+  const svg = $('#nl');
+  let dragging = false;
+  function valueAt(e) {
+    const r = svg.getBoundingClientRect();
+    const scale = r.width / Number(svg.viewBox.baseVal.width || r.width);
+    const x = (e.clientX - r.left) / scale;
+    return Math.round((x - geo.pad) / geo.sp) + MIN;
+  }
+  svg.addEventListener('pointerdown', e => {
+    if (st.done || st.busy) return;
+    dragging = true;
+    try { svg.setPointerCapture(e.pointerId); } catch (err) {}
+    setPos(valueAt(e));
+  });
+  svg.addEventListener('pointermove', e => { if (dragging) { const v = valueAt(e); if (v !== st.pos) setPos(v); } });
+  ['pointerup', 'pointercancel'].forEach(t => svg.addEventListener(t, () => { dragging = false; }));
+
+  $('#btnLeft').addEventListener('click', () => setPos(st.pos - 1));
+  $('#btnRight').addEventListener('click', () => setPos(st.pos + 1));
+  $('#btnRedo').addEventListener('click', redoStep);
+  $('#btnOk').addEventListener('click', checkStep);
+  $('#btnNew').addEventListener('click', newProblem);
+  $('#btnDemo').addEventListener('click', runDemo);
+  $('#ansForm').addEventListener('submit', checkAnswer);
+  $('#btnSound').addEventListener('click', () => {
+    soundOn = !soundOn;
+    try { localStorage.setItem('nl-sound', soundOn ? 'on' : 'off'); } catch (e) {}
+    renderSound();
+    if (soundOn) sInfo();
+  });
+  renderSound();
+
+  document.addEventListener('keydown', e => {
+    const tag = (e.target.tagName || '').toLowerCase();
+    if (tag === 'input' || tag === 'textarea') return;
+    if (e.key === 'ArrowLeft') { e.preventDefault(); setPos(st.pos - 1); }
+    else if (e.key === 'ArrowRight') { e.preventDefault(); setPos(st.pos + 1); }
+    else if (e.key === 'Enter' && (tag !== 'button' || e.target.id === 'btnOk')) {
+      if (tag !== 'button') { e.preventDefault(); checkStep(); }
+    }
+  });
+
+  document.querySelectorAll('input[name="terms"]').forEach(r => {
+    r.checked = r.value === pref;
+    r.addEventListener('change', () => {
+      pref = r.value;
+      try { localStorage.setItem('nl-terms', pref); } catch (e) {}
+      newProblem();
+    });
+  });
+
+  if ('ResizeObserver' in window) {
+    let first = true;
+    new ResizeObserver(() => {
+      if (first) { first = false; return; }
+      document.body.classList.add('noanim');
+      renderLine();
+      requestAnimationFrame(() => document.body.classList.remove('noanim'));
+    }).observe($('#lineWrap'));
+  } else {
+    window.addEventListener('resize', renderLine);
+  }
+
+  newProblem();
+})();
+</script>
+
+</body></html>

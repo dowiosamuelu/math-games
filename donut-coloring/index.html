@@ -1,0 +1,483 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>甜甜圈塗色</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@700;900&display=swap">
+<style>
+/* Layout: the donut stage is the game board with its paint palette docked inside; a narrow rail tracks progress; the explanation unlocks below after the puzzle is solved */
+:root{
+  --bg:#ECEEF2; --surface:#F7F8FA; --fg:#151821; --muted:#586072; --line:#CBD0DA; --stage:#DFE3EA; --stage-hi:#F3F5F8;
+  --glass:rgba(247,248,250,.88); --clash:#D7263D; --ok:#2E8B57;
+  --red:#E53945; --orange:#F28C28; --yellow:#F2CC35; --green:#43A84A; --blue:#2F9BE0; --indigo:#3949AB; --violet:#8E44AD;
+  --f-display:"Noto Serif TC","Songti TC","PMingLiU",serif;
+  --f-body:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#111319; --surface:#181B23; --fg:#E8EBF1; --muted:#9AA2B4; --line:#2C3240; --stage:#171A22; --stage-hi:#242936;
+  --glass:rgba(24,27,35,.86); --clash:#FF5A6E; --ok:#5CC98A; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111319; --surface:#181B23; --fg:#E8EBF1; --muted:#9AA2B4; --line:#2C3240; --stage:#171A22; --stage-hi:#242936;
+  --glass:rgba(24,27,35,.86); --clash:#FF5A6E; --ok:#5CC98A; color-scheme:dark}
+
+html,body{background:var(--bg)}
+body{color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.7;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:24px 48px}
+.wrap{max-width:1220px;margin:0 auto;display:flex;flex-direction:column;gap:22px}
+
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:10px 32px}
+.eyebrow{font-family:var(--f-mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 4px}
+h1{font-family:var(--f-display);font-weight:900;font-size:clamp(32px,5.6vw,56px);line-height:1.05;margin:0;letter-spacing:.03em;text-wrap:balance}
+.lede{max-width:30em;margin:0;color:var(--muted);text-wrap:pretty}
+.lede b{color:var(--fg)}
+
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:20px;align-items:start}
+@media (max-width:880px){.grid{grid-template-columns:minmax(0,1fr)}}
+
+.stage{position:relative;border-radius:20px;overflow:hidden;max-width:100%;
+  background:radial-gradient(120% 90% at 50% 40%,var(--stage-hi),var(--stage));height:min(78vh,720px);min-height:420px}
+@media (max-width:880px){.stage{height:auto;aspect-ratio:1/1.18;min-height:0}}
+.stage canvas{display:block;width:100%;height:100%;touch-action:none;cursor:crosshair}
+.toast{position:absolute;top:12px;left:12px;right:12px;margin:0 auto;max-width:560px;background:var(--glass);
+  -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border:1px solid var(--line);border-radius:14px;
+  padding:8px 14px;font-size:14px;line-height:1.55;text-wrap:pretty;transition:border-color .2s}
+.toast.clash{border-color:var(--clash)}
+.toast.clash b{color:var(--clash)}
+.toast.win{border-color:var(--ok)}
+.toast .n{font-family:var(--f-mono);font-weight:500}
+
+.dock{position:absolute;left:12px;right:12px;bottom:12px;margin:0 auto;max-width:520px;display:flex;gap:6px;
+  background:var(--glass);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border:1px solid var(--line);border-radius:18px;padding:8px}
+.paint{flex:1 1 0;min-width:0;max-width:56px;aspect-ratio:1/1.15;border:none;border-radius:12px;cursor:pointer;padding:0;
+  display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:2px;padding-bottom:4px;
+  color:#fff;font-family:var(--f-body);font-weight:700;font-size:14px;text-shadow:0 1px 2px rgba(0,0,0,.35);
+  transition:transform .15s,box-shadow .15s}
+.paint .used{width:6px;height:6px;border-radius:50%;background:#fff;opacity:0}
+.paint.isused .used{opacity:.95}
+.paint[aria-pressed="true"]{transform:translateY(-4px);box-shadow:0 0 0 2px var(--surface),0 0 0 4px var(--fg)}
+.paint.eraser{background:var(--surface);color:var(--fg);text-shadow:none;border:1px dashed var(--muted);font-weight:500;font-size:13px}
+.paint:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+
+.rail{display:flex;flex-direction:column;gap:16px;min-width:0}
+.block{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.block h2{font-size:12px;font-family:var(--f-mono);font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0}
+.slots{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.slot{aspect-ratio:1;border-radius:9px;border:1.5px dashed var(--line);display:grid;place-items:center;
+  font-family:var(--f-mono);font-size:13px;color:var(--muted);transition:background .2s,border-color .2s}
+.slot.filled{border-style:solid;border-color:transparent;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.35)}
+.slot.clash{box-shadow:0 0 0 2px var(--clash)}
+.meter{display:flex;justify-content:space-between;align-items:baseline;font-size:14px}
+.meter .big{font-family:var(--f-mono);font-size:28px;font-weight:500;font-variant-numeric:tabular-nums}
+.meter .big small{font-size:15px;color:var(--muted)}
+.row{display:flex;flex-wrap:wrap;gap:8px}
+.btn{font:inherit;font-size:14px;border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:999px;padding:6px 14px;cursor:pointer}
+.btn:hover{border-color:var(--muted)}
+.btn.link{border:none;background:none;padding:6px 2px;color:var(--muted);text-decoration:underline;text-underline-offset:3px}
+
+.reveal h3{font-family:var(--f-display);font-weight:900;font-size:24px;line-height:1.25;margin:0;text-wrap:balance}
+.reveal p{margin:0}
+.reveal input{width:100%;accent-color:var(--fg)}
+.ticks{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-top:-8px}
+.k7 svg{width:100%;height:auto;display:block;max-width:230px;margin:0 auto}
+.k7 line{stroke:var(--muted);stroke-width:1.3;opacity:.6}
+.k7 circle{stroke:var(--surface);stroke-width:3}
+.k7 text{font-family:var(--f-mono);font-size:13px;fill:#fff;text-anchor:middle;dominant-baseline:central}
+.cap{font-size:13px;color:var(--muted)}
+
+.theory{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px 28px;border-top:1px solid var(--line);padding-top:24px}
+@media (max-width:880px){.theory{grid-template-columns:minmax(0,1fr)}}
+.theory h3{font-family:var(--f-display);font-weight:700;font-size:20px;margin:0 0 6px;text-wrap:balance}
+.theory p{margin:0 0 8px;max-width:36em}
+.theory .m{color:var(--muted)}
+.formula{font-family:var(--f-mono);font-size:14px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 10px;overflow-x:auto;white-space:nowrap;margin:8px 0}
+.tbl{width:100%;border-collapse:collapse;font-size:14px;margin-top:6px;font-variant-numeric:tabular-nums}
+.tbl td{padding:4px 0;border-bottom:1px solid var(--line)}
+.tbl td:last-child{text-align:right;font-family:var(--f-mono)}
+.err{padding:24px;color:var(--muted)}
+[hidden]{display:none!important}
+@media (prefers-reduced-motion:reduce){.paint,.slot,.toast{transition:none}}
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <p class="eyebrow">塗色挑戰</p>
+      <h1>甜甜圈塗色</h1>
+    </div>
+    <p class="lede">這個甜甜圈被分成 7 塊。規則只有一條：<b>相鄰的兩塊不能同色</b>。試著用最少的顏色塗滿它。</p>
+  </header>
+
+  <div class="grid">
+    <div class="stage" id="stage">
+      <canvas id="cv" aria-label="可旋轉、可點選塗色的 3D 甜甜圈"></canvas>
+      <p class="toast" id="toast" aria-live="polite">選一個顏色，再點甜甜圈上的一塊塗上去。拖曳可以轉動甜甜圈。</p>
+      <div class="dock" id="dock" role="toolbar" aria-label="顏料"></div>
+    </div>
+
+    <aside class="rail">
+      <section class="block">
+        <h2>進度</h2>
+        <div class="slots" id="slots"></div>
+        <div class="meter"><span>已塗區域</span><span class="big" id="mRegions">0<small> / 7</small></span></div>
+        <div class="meter"><span>用了幾種顏色</span><span class="big" id="mColors">0</span></div>
+        <div class="row">
+          <button class="btn" id="reset" type="button">全部清除</button>
+          <button class="btn" id="spin" type="button" aria-pressed="true">自動旋轉</button>
+          <button class="btn link" id="skip" type="button">直接看答案</button>
+        </div>
+      </section>
+
+      <section class="block reveal" id="reveal" hidden>
+        <h2>揭曉</h2>
+        <h3 id="rvTitle">7 種顏色，一個都不能少</h3>
+        <p id="rvText"></p>
+        <div class="k7">
+          <svg id="k7" viewBox="-115 -115 230 230" role="img" aria-label="7 塊區域兩兩相鄰"></svg>
+        </div>
+        <p class="cap">每條線代表兩塊區域有共同邊界。7 塊兩兩相連，共 21 條線，所以任兩塊都不能同色。</p>
+        <h2>把甜甜圈攤平看看</h2>
+        <input type="range" id="morph" min="0" max="2" step="0.001" value="2" aria-label="甜甜圈攤平程度">
+        <div class="ticks"><span>平面</span><span>圓筒</span><span>甜甜圈</span></div>
+        <div class="row"><button class="btn" id="again" type="button">再玩一次</button></div>
+      </section>
+    </aside>
+  </div>
+
+  <section class="theory" id="theory" hidden>
+    <div>
+      <h3>這就是七色定理</h3>
+      <p>在甜甜圈表面（數學上叫環面）畫任何地圖，只要相鄰區域不同色，最多 7 種顏色就一定塗得完。Heawood 在 1890 年證明了這個上限。</p>
+      <p class="m">你剛剛塗的這張地圖說明 7 是必要的：7 塊彼此全部相鄰，少一色就塗不完。平面上同樣的問題只要 4 色，這是四色定理。</p>
+    </div>
+    <div>
+      <h3>這張地圖怎麼做的</h3>
+      <p>把平面鋪滿六邊形，中心座標 (a, b) 的六邊形塗第 (a + 3b) mod 7 色。六個鄰居的色號分別差 +1、+3、+2、−1、−3、−2，剛好是其他六色。</p>
+      <p class="m">再沿著同色重複的週期，把平面左右黏成圓筒，圓筒兩端再接成甜甜圈。拉右邊的滑桿可以看整個過程。</p>
+    </div>
+    <div>
+      <h3>為什麼不會超過 7</h3>
+      <p>環面的歐拉示性數 χ = 0，可推出鄰接圖的邊數 E ≤ 3V，所以總有一塊的鄰居不超過 6 個。先拿掉它、塗好其餘，再放回來，一定還剩一色可用。</p>
+      <div class="formula">需要的色數 = ⌊(7 + √(49 − 24χ)) / 2⌋</div>
+      <table class="tbl">
+        <tr><td>平面・球面（χ = 2）</td><td>4</td></tr>
+        <tr><td>甜甜圈・環面（χ = 0）</td><td>7</td></tr>
+        <tr><td>雙孔甜甜圈（χ = −2）</td><td>8</td></tr>
+      </table>
+    </div>
+  </section>
+</div>
+
+<script src="vendor/three.min.js"></script>
+<script src="vendor/OrbitControls.js"></script>
+<script>
+(function(){
+const stage=document.getElementById('stage'), canvas=document.getElementById('cv');
+if(!window.THREE){stage.innerHTML='<p class="err">3D 函式庫沒有載入，請重新整理頁面。</p>';return;}
+
+const css=getComputedStyle(document.documentElement);
+const KEYS=['red','orange','yellow','green','blue','indigo','violet'];
+const PAL=KEYS.map(k=>css.getPropertyValue('--'+k).trim());
+const PNAME=['紅','橙','黃','綠','藍','靛','紫'];
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const R=1.5, r=0.95, S3=Math.sqrt(3);
+const A=[2,S3], B=[-2.5,S3/2];   // period lattice of the (a+3b) mod 7 hex coloring
+
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));
+renderer.setClearColor(0x000000,0);
+const scene=new THREE.Scene(), pickScene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(38,1,0.1,100);
+camera.position.set(2.4,-4.6,6.2);
+const controls=new THREE.OrbitControls(camera,canvas);
+controls.enableDamping=true; controls.dampingFactor=0.08; controls.enablePan=false;
+controls.minDistance=4; controls.maxDistance=16; controls.autoRotate=!reduce; controls.autoRotateSpeed=0.8;
+
+const uniforms={
+  uMorph:{value:2}, uR:{value:R}, ur:{value:r}, uTime:{value:0}, uFlash:{value:0},
+  uHover:{value:-1}, uHoverIdx:{value:-1},
+  uA:{value:new THREE.Vector2(A[0],A[1])}, uB:{value:new THREE.Vector2(B[0],B[1])},
+  uPal:{value:PAL.map(h=>new THREE.Color(h))}, uIdx:{value:[-1,-1,-1,-1,-1,-1,-1]},
+  uDough:{value:new THREE.Color('#E9EBF0')}
+};
+
+const vert=`
+uniform float uMorph; uniform float uR; uniform float ur;
+varying vec2 vUv; varying vec3 vN; varying vec3 vV;
+vec3 shape(vec2 q){
+  float s1=max(clamp(uMorph,0.,1.),5e-4), s2=max(clamp(uMorph-1.,0.,1.),5e-4);
+  float x=(q.x-.5)*6.2831853*uR, Lv=(q.y-.5)*6.2831853*ur;
+  float rho1=ur/s1, th=Lv/rho1;
+  float yl=rho1*sin(th);
+  float sh=sin(th*.5); float zl=ur-2.*rho1*sh*sh;
+  float rho2=uR/s2, al=x/rho2; float sa=sin(al*.5);
+  return vec3((rho2+yl)*sin(al), yl*cos(al)-2.*rho2*sa*sa+s2*uR, zl);
+}
+void main(){
+  vUv=uv;
+  vec3 p=shape(uv);
+  vec3 pu=shape(uv+vec2(.002,0.))-p, pv=shape(uv+vec2(0.,.002))-p;
+  vec3 n=normalize(cross(pu,pv));
+  vec4 mv=modelViewMatrix*vec4(p,1.);
+  vN=normalMatrix*n; vV=-mv.xyz;
+  gl_Position=projectionMatrix*mv;
+}`;
+
+const cellFn=`
+uniform vec2 uA; uniform vec2 uB;
+const float H=.8660254;
+vec2 toXY(vec2 ab){return vec2(ab.x+.5*ab.y, ab.y*H);}
+float col7(vec2 c){float x=c.x+3.*c.y; return x-7.*floor((x+.5)/7.);}
+void tryN(vec2 c, vec2 o, vec2 P, inout float best, inout vec2 bc){
+  vec2 n=c+o; vec2 d=P-toXY(n); float q=dot(d,d); if(q<best){best=q;bc=n;}
+}
+void cell(vec2 uv, out float k1, out float k2, out float e){
+  vec2 P=uv.x*uA+uv.y*uB;
+  float b=P.y/H, a=P.x-.5*b;
+  vec3 cu=vec3(a,-a-b,b), rc=floor(cu+.5), df=abs(rc-cu);
+  if(df.x>df.y&&df.x>df.z) rc.x=-rc.y-rc.z; else if(df.y>df.z) rc.y=-rc.x-rc.z; else rc.z=-rc.x-rc.y;
+  vec2 c=vec2(rc.x,rc.z);
+  vec2 d0=P-toXY(c); float d1=dot(d0,d0);
+  float best=1e9; vec2 bc=c;
+  tryN(c,vec2(1.,0.),P,best,bc); tryN(c,vec2(0.,1.),P,best,bc); tryN(c,vec2(-1.,1.),P,best,bc);
+  tryN(c,vec2(-1.,0.),P,best,bc); tryN(c,vec2(0.,-1.),P,best,bc); tryN(c,vec2(1.,-1.),P,best,bc);
+  k1=col7(c); k2=col7(bc); e=(best-d1)*.5;
+}`;
+
+const frag=`
+uniform float uTime; uniform float uFlash; uniform float uHover; uniform float uHoverIdx;
+uniform vec3 uPal[7]; uniform float uIdx[7]; uniform vec3 uDough;
+varying vec2 vUv; varying vec3 vN; varying vec3 vV;
+${cellFn}
+float idxOf(float k){
+  if(k<.5) return uIdx[0]; if(k<1.5) return uIdx[1]; if(k<2.5) return uIdx[2];
+  if(k<3.5) return uIdx[3]; if(k<4.5) return uIdx[4]; if(k<5.5) return uIdx[5]; return uIdx[6];
+}
+vec3 palOf(float i){
+  if(i<.5) return uPal[0]; if(i<1.5) return uPal[1]; if(i<2.5) return uPal[2];
+  if(i<3.5) return uPal[3]; if(i<4.5) return uPal[4]; if(i<5.5) return uPal[5]; return uPal[6];
+}
+void main(){
+  float k1,k2,e; cell(vUv,k1,k2,e);
+  float i1=idxOf(k1), i2=idxOf(k2);
+  bool painted=i1>-.5;
+  vec3 base=painted? palOf(i1) : uDough;
+  if(abs(k1-uHover)<.5){
+    if(uHoverIdx>-.5) base=mix(palOf(uHoverIdx),vec3(1.),.22);
+    else base=uDough;
+  }
+  bool clash=painted&&abs(i1-i2)<.5;
+  float pulse=.5+.5*sin(uTime*7.);
+  float fw=fwidth(e);
+  float w=clash? .05+.015*pulse : .016+.025*uFlash;
+  float ln=1.-smoothstep(w-fw,w+fw,e);
+  vec3 lineCol=clash? mix(vec3(.85,.05,.15),vec3(1.),.35*pulse) : mix(vec3(.08,.08,.11),vec3(1.),uFlash);
+  vec3 N=normalize(vN); if(!gl_FrontFacing) N=-N;
+  vec3 V=normalize(vV);
+  vec3 L1=normalize(vec3(.45,.75,.55)), L2=normalize(vec3(-.6,-.35,.45));
+  float d=max(dot(N,L1),0.)*.6+max(dot(N,L2),0.)*.18+.42;
+  float sp=pow(max(dot(N,normalize(L1+V)),0.),painted?70.:18.)*(painted?.5:.12);
+  float fr=pow(1.-max(dot(N,V),0.),3.)*.16;
+  vec3 c=mix(base,lineCol,ln)*d+vec3(sp+fr);
+  if(!gl_FrontFacing) c*=.8;
+  gl_FragColor=vec4(c,1.);
+}`;
+
+const pickFrag=`
+varying vec2 vUv; varying vec3 vN; varying vec3 vV;
+${cellFn}
+void main(){ float k1,k2,e; cell(vUv,k1,k2,e); gl_FragColor=vec4((k1+1.)*30./255.,0.,0.,1.); }`;
+
+const geo=new THREE.PlaneGeometry(1,1,288,144);
+const mat=new THREE.ShaderMaterial({uniforms,vertexShader:vert,fragmentShader:frag,side:THREE.DoubleSide,extensions:{derivatives:true}});
+const pmat=new THREE.ShaderMaterial({uniforms,vertexShader:vert,fragmentShader:pickFrag,side:THREE.DoubleSide});
+const mesh=new THREE.Mesh(geo,mat), pmesh=new THREE.Mesh(geo,pmat);
+mesh.frustumCulled=pmesh.frustumCulled=false;
+scene.add(mesh); pickScene.add(pmesh);
+
+function shape(u,v,m){
+  const s1=Math.max(Math.min(m,1),5e-4), s2=Math.max(Math.min(m-1,1),5e-4);
+  const x=(u-.5)*2*Math.PI*R, Lv=(v-.5)*2*Math.PI*r, rho1=r/s1, th=Lv/rho1;
+  const yl=rho1*Math.sin(th), zl=r-2*rho1*Math.sin(th/2)**2, rho2=R/s2, al=x/rho2;
+  return new THREE.Vector3((rho2+yl)*Math.sin(al), yl*Math.cos(al)-2*rho2*Math.sin(al/2)**2+s2*R, zl);
+}
+const det=A[0]*B[1]-A[1]*B[0];
+const centers=[0,1,2,3,4,5,6].map(k=>{const u=(k*B[1])/det, v=(-A[1]*k)/det; return [u-Math.floor(u), v-Math.floor(v)];});
+const labels=centers.map((_,k)=>{
+  const c=document.createElement('canvas'); c.width=c.height=128;
+  const g=c.getContext('2d');
+  g.fillStyle='rgba(16,18,24,.78)'; g.beginPath(); g.arc(64,64,48,0,Math.PI*2); g.fill();
+  g.strokeStyle='rgba(255,255,255,.9)'; g.lineWidth=6; g.stroke();
+  g.fillStyle='#fff'; g.font='600 62px "IBM Plex Mono", ui-monospace, monospace'; g.textAlign='center'; g.textBaseline='middle';
+  g.fillText(String(k+1),64,68);
+  const s=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),depthWrite:false,transparent:true}));
+  scene.add(s); return s;
+});
+function sheetScale(m){const t=Math.min(Math.max((m-.3)/1.5,0),1); return .5+.5*t*t*(3-2*t);}
+function applyMorph(m){
+  uniforms.uMorph.value=m;
+  const sc=sheetScale(m); mesh.scale.setScalar(sc); pmesh.scale.setScalar(sc);
+  centers.forEach(([u,v],k)=>{
+    const p=shape(u,v,m), pu=shape(u+1e-3,v,m).sub(p), pv=shape(u,v+1e-3,m).sub(p);
+    labels[k].position.copy(p.addScaledVector(pu.cross(pv).normalize(),.1).multiplyScalar(sc));
+    labels[k].scale.setScalar(.26);
+  });
+  morphEl.value=m;
+}
+
+// ---------- game state ----------
+const toast=document.getElementById('toast'), dock=document.getElementById('dock'), slotsEl=document.getElementById('slots');
+const mRegions=document.getElementById('mRegions'), mColors=document.getElementById('mColors');
+const reveal=document.getElementById('reveal'), theory=document.getElementById('theory'), morphEl=document.getElementById('morph');
+let fills=[-1,-1,-1,-1,-1,-1,-1], tool=0, clashEvents=0, solved=false, skipped=false;
+
+const paints=PAL.map((h,i)=>{
+  const b=document.createElement('button'); b.type='button'; b.className='paint'; b.style.background=h;
+  b.innerHTML='<span>'+PNAME[i]+'</span><span class="used"></span>';
+  b.setAttribute('aria-label',PNAME[i]+'色'); b.addEventListener('click',()=>setTool(i)); dock.appendChild(b); return b;
+});
+const eraser=document.createElement('button'); eraser.type='button'; eraser.className='paint eraser';
+eraser.innerHTML='<span>擦掉</span><span class="used"></span>'; eraser.setAttribute('aria-label','橡皮擦');
+eraser.addEventListener('click',()=>setTool(-1)); dock.appendChild(eraser);
+function setTool(t){tool=t; paints.forEach((b,i)=>b.setAttribute('aria-pressed',String(i===t))); eraser.setAttribute('aria-pressed',String(t===-1));}
+setTool(0);
+
+const slots=[0,1,2,3,4,5,6].map(k=>{const d=document.createElement('div'); d.className='slot'; d.textContent=k+1; slotsEl.appendChild(d); return d;});
+
+function clashes(){const out=[]; for(let i=0;i<7;i++)for(let j=i+1;j<7;j++) if(fills[i]>=0&&fills[i]===fills[j]) out.push([i,j]); return out;}
+
+function render(){
+  uniforms.uIdx.value=fills.slice();
+  const cl=clashes(), bad=new Set(cl.flat());
+  const used=new Set(fills.filter(f=>f>=0));
+  const painted=fills.filter(f=>f>=0).length;
+  paints.forEach((b,i)=>b.classList.toggle('isused',used.has(i)));
+  slots.forEach((s,k)=>{
+    s.classList.toggle('filled',fills[k]>=0); s.style.background=fills[k]>=0?PAL[fills[k]]:'';
+    s.classList.toggle('clash',bad.has(k));
+  });
+  mRegions.innerHTML=painted+'<small> / 7</small>'; mColors.textContent=used.size;
+  return {cl,used,painted};
+}
+
+function say(html,cls){toast.className='toast'+(cls?' '+cls:''); toast.innerHTML=html;}
+
+function paint(k){
+  if(k<0) return;
+  const prev=fills[k];
+  fills[k]=tool;
+  if(prev===tool) return;
+  const {cl,used,painted}=render();
+  if(tool===-1){say(prev>=0?'擦掉了第 <span class="n">'+(k+1)+'</span> 區。':'這一塊本來就沒塗色。'); return;}
+  const mine=cl.filter(([i,j])=>i===k||j===k);
+  if(mine.length){
+    clashEvents++;
+    const o=mine[0][0]===k?mine[0][1]:mine[0][0];
+    let msg='<b>撞色了！</b>第 <span class="n">'+(k+1)+'</span> 區和第 <span class="n">'+(o+1)+'</span> 區都是'+PNAME[tool]+'色，而且它們有共同邊界（看閃爍的紅線）。';
+    if(clashEvents===2) msg+='<br>想省顏色，就得找兩塊<b>不相鄰</b>的區域。轉一轉甜甜圈找找看？';
+    else if(clashEvents>=3) msg+='<br>每次重複用色都會撞到…會不會根本沒有兩塊是不相鄰的？';
+    say(msg,'clash'); return;
+  }
+  if(cl.length){say('還有撞色沒解決：第 <span class="n">'+(cl[0][0]+1)+'</span> 區和第 <span class="n">'+(cl[0][1]+1)+'</span> 區同色。','clash'); return;}
+  if(painted===7){win(); return;}
+  if(used.size===painted&&painted>=3&&clashEvents===0)
+    say('目前每一塊都用不同顏色。能不能讓兩塊<b>共用</b>一種顏色，省下一色？');
+  else
+    say('第 <span class="n">'+(k+1)+'</span> 區塗上'+PNAME[tool]+'色。還剩 <span class="n">'+(7-painted)+'</span> 塊。');
+}
+
+function win(){
+  solved=true;
+  say('<b>塗完了！</b>你用了 <span class="n">7</span> 種顏色。這不是你塗得不好：在這個甜甜圈上，7 色一個都省不掉。','win');
+  document.getElementById('rvText').textContent=clashEvents>0
+    ?'你試過讓兩塊共用顏色，每一次都撞到邊界。原因是這 7 塊兩兩相鄰：每一塊都和其他 6 塊接壤，所以任兩塊都不能同色。'
+    :'你每一塊都用了不同顏色，其實也只能這樣。這 7 塊兩兩相鄰：每一塊都和其他 6 塊接壤，所以任兩塊都不能同色。';
+  drawK7(); reveal.hidden=false; theory.hidden=false;
+  flashT=performance.now(); spinBoost=6;
+}
+
+function skipToAnswer(){
+  fills=[0,1,2,3,4,5,6]; render(); skipped=true;
+  say('這是一種塗法：7 塊各用一色。試試把任一塊換成別的顏色，就會撞色。');
+  document.getElementById('rvTitle').textContent='7 種顏色，一個都不能少';
+  document.getElementById('rvText').textContent='這 7 塊兩兩相鄰：每一塊都和其他 6 塊接壤，所以任兩塊都不能同色，7 色缺一不可。';
+  solved=true; drawK7(); reveal.hidden=false; theory.hidden=false; flashT=performance.now();
+}
+
+function resetAll(){
+  fills=[-1,-1,-1,-1,-1,-1,-1]; clashEvents=0; solved=false; skipped=false; render();
+  reveal.hidden=true; theory.hidden=true; anim={from:+morphEl.value,to:2,t0:performance.now(),dur:900};
+  say('選一個顏色，再點甜甜圈上的一塊塗上去。拖曳可以轉動甜甜圈。'); setTool(0);
+}
+
+const NS='http://www.w3.org/2000/svg', k7=document.getElementById('k7');
+function drawK7(){
+  k7.innerHTML='';
+  const pos=[0,1,2,3,4,5,6].map(k=>{const a=k*2*Math.PI/7-Math.PI/2; return [Math.cos(a)*86,Math.sin(a)*86];});
+  for(let i=0;i<7;i++)for(let j=i+1;j<7;j++){
+    const l=document.createElementNS(NS,'line');
+    l.setAttribute('x1',pos[i][0]);l.setAttribute('y1',pos[i][1]);l.setAttribute('x2',pos[j][0]);l.setAttribute('y2',pos[j][1]);
+    k7.appendChild(l);
+  }
+  pos.forEach((p,k)=>{
+    const c=document.createElementNS(NS,'circle'); c.setAttribute('cx',p[0]); c.setAttribute('cy',p[1]); c.setAttribute('r',16);
+    c.setAttribute('fill',fills[k]>=0?PAL[fills[k]]:'#999');
+    const t=document.createElementNS(NS,'text'); t.setAttribute('x',p[0]); t.setAttribute('y',p[1]); t.textContent=k+1;
+    k7.append(c,t);
+  });
+}
+
+document.getElementById('reset').addEventListener('click',resetAll);
+document.getElementById('again').addEventListener('click',()=>{resetAll(); stage.scrollIntoView({behavior:reduce?'auto':'smooth',block:'center'});});
+document.getElementById('skip').addEventListener('click',skipToAnswer);
+const spinBtn=document.getElementById('spin');
+spinBtn.setAttribute('aria-pressed',String(controls.autoRotate));
+spinBtn.addEventListener('click',()=>{controls.autoRotate=!controls.autoRotate; spinBtn.setAttribute('aria-pressed',String(controls.autoRotate));});
+morphEl.addEventListener('input',()=>{anim=null; applyMorph(+morphEl.value);});
+
+// ---------- picking ----------
+const rt=new THREE.WebGLRenderTarget(1,1), px=new Uint8Array(4);
+function pick(cx,cy){
+  const rc=canvas.getBoundingClientRect();
+  camera.setViewOffset(rc.width,rc.height,cx-rc.left,cy-rc.top,1,1);
+  renderer.setRenderTarget(rt); renderer.clear(); renderer.render(pickScene,camera);
+  renderer.readRenderTargetPixels(rt,0,0,1,1,px);
+  renderer.setRenderTarget(null); camera.clearViewOffset();
+  return px[0]>0? Math.round(px[0]/30)-1 : -1;
+}
+let down=null, hoverAt=null;
+canvas.addEventListener('pointerdown',e=>{down={x:e.clientX,y:e.clientY,t:performance.now()};});
+canvas.addEventListener('pointerup',e=>{
+  if(!down)return;
+  if(Math.hypot(e.clientX-down.x,e.clientY-down.y)<10&&performance.now()-down.t<700) paint(pick(e.clientX,e.clientY));
+  down=null;
+});
+canvas.addEventListener('pointermove',e=>{if(e.pointerType==='mouse'&&!(e.buttons&1)) hoverAt=[e.clientX,e.clientY]; else hoverAt=null;});
+canvas.addEventListener('pointerleave',()=>{hoverAt=null; uniforms.uHover.value=-1;});
+
+function resize(){
+  const w=stage.clientWidth,h=stage.clientHeight; if(!w||!h)return;
+  renderer.setSize(w,h,false); camera.aspect=w/h;
+  camera.position.setLength(w/h<.95?10.5:9);
+  camera.updateProjectionMatrix();
+}
+new ResizeObserver(resize).observe(stage); resize();
+
+let anim=null, flashT=-1e9, spinBoost=0;
+const ease=t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
+function frame(now){
+  uniforms.uTime.value=now/1000;
+  const ft=(now-flashT)/1800; uniforms.uFlash.value=ft>=0&&ft<1?Math.sin(ft*Math.PI):0;
+  if(anim){const t=Math.min(Math.max((now-anim.t0)/anim.dur,0),1); applyMorph(anim.from+(anim.to-anim.from)*ease(t)); if(t>=1)anim=null;}
+  if(hoverAt){uniforms.uHover.value=pick(hoverAt[0],hoverAt[1]); uniforms.uHoverIdx.value=tool; hoverAt=null;}
+  spinBoost*=.985; controls.autoRotateSpeed=.8+(reduce?0:spinBoost);
+  controls.update(); renderer.render(scene,camera);
+  requestAnimationFrame(frame);
+}
+applyMorph(2); render();
+requestAnimationFrame(frame);
+})();
+</script>
+
+</body></html>

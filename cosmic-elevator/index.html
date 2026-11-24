@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>宇宙電梯</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Noto+Sans+TC:wght@600;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* 一棟從宇宙蓋到奈米的大樓：樓層 = 10 的次方。地上是夜空，地面是草地，地下室越挖越深。 */
+  --bg:#141b3d;
+  --bg-2:#1f2a5c;
+  --ink:#1d2340;
+  --gold:#ffc83d;--gold-d:#d99500;
+  --go:#2fd27a;--go-d:#169b52;
+  --no:#ff5a5f;--no-d:#c43a3f;
+  --blue:#4aa8ff;--blue-d:#1f72c4;
+  --soft:#aab3e0;
+  --f-head:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+  --f-num:"Fredoka","Noto Sans TC",sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:#fff;font-family:var(--f-head);-webkit-tap-highlight-color:transparent;overflow:hidden}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+sup{font-size:.6em;line-height:0;vertical-align:.8em;margin-left:.03em}
+.num{font-family:var(--f-num);font-weight:700}
+
+#app{height:100%;display:flex;flex-direction:column;max-width:760px;margin:0 auto}
+.top{flex:none;height:52px;display:flex;align-items:center;gap:8px;padding:0 10px}
+.top .home{font-weight:900;font-size:14px;color:var(--soft);padding:6px 4px}
+.led{flex:1;display:flex;justify-content:center;align-items:baseline;gap:8px;background:#0b1029;border:2px solid #2a3570;border-radius:10px;padding:4px 10px;max-width:220px;margin:0 auto}
+.led b{font-family:var(--f-num);font-weight:700;font-size:22px;color:#ff9b3d;text-shadow:0 0 10px rgba(255,155,61,.6)}
+.led small{font-size:13px;color:#ffb877;font-weight:900}
+.sound{border:2px solid rgba(255,255,255,.22);border-radius:999px;padding:4px 10px;font-size:12px;font-weight:900;color:#cfd5f5;white-space:nowrap}
+.sound.off{opacity:.55}
+
+.main{flex:1;min-height:0;display:flex;gap:10px;padding:0 10px 10px}
+
+/* 大樓 */
+.building{flex:none;width:128px;position:relative;border-radius:12px;overflow:hidden;box-shadow:0 0 0 2px #2a3570}
+.rows{position:absolute;inset:0;display:flex;flex-direction:column}
+.row{flex:1;min-height:0;display:flex;align-items:center;gap:4px;padding:0 4px 0 34px;border-bottom:1px solid rgba(255,255,255,.07);text-align:left;position:relative}
+.row .ex{font-family:var(--f-num);font-weight:700;font-size:15px;min-width:38px}
+.row .nm{font-size:10px;font-weight:900;opacity:.75;min-width:24px}
+.row .ic{font-size:12px;letter-spacing:-1px;white-space:nowrap;overflow:hidden}
+.row.lock{color:rgba(255,255,255,.35)}
+.row.lock .ic{display:none}
+.row.done .nm::after{content:" ✓";color:var(--go)}
+.row.here{box-shadow:inset 0 0 0 2px var(--gold)}
+.row.ground{border-bottom:3px solid #6fd36b}
+.track{position:absolute;left:0;top:0;bottom:0;width:30px;background:rgba(0,0,0,.35);border-right:2px solid rgba(255,255,255,.12)}
+.car{position:absolute;left:3px;width:24px;top:0;background:var(--gold);border-radius:5px;box-shadow:0 3px 0 var(--gold-d),0 0 14px rgba(255,200,61,.6);display:flex;align-items:center;justify-content:center;font-size:12px}
+.car::before,.car::after{content:"";position:absolute;top:3px;bottom:3px;width:8px;background:#fff3c9;border-radius:2px;transition:transform .25s}
+.car::before{left:3px}.car::after{right:3px}
+.car.open::before{transform:translateX(-3px) scaleX(.4)}
+.car.open::after{transform:translateX(3px) scaleX(.4)}
+.car.shake{animation:shake .4s}
+
+/* 右側 */
+.side{flex:1;min-width:0;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding-bottom:6px}
+.panel{background:#fff;color:var(--ink);border-radius:16px;padding:14px;box-shadow:0 6px 0 #b8bfe3}
+.title{margin:6px 0 0;font-weight:900;font-size:40px;line-height:1.05;color:var(--gold);text-shadow:0 4px 0 var(--gold-d),0 8px 18px rgba(0,0,0,.45)}
+.title span{display:block;color:#fff;text-shadow:0 3px 0 #7d86b3}
+.lead{color:#cfd5f5;font-weight:600;line-height:1.6;margin:0;font-size:15px}
+.big{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;border-radius:16px;padding:14px 16px;font-weight:900;font-size:20px;color:#fff}
+.big small{font-size:13px;font-weight:600;opacity:.9}
+.big.p1{background:var(--go);box-shadow:0 6px 0 var(--go-d)}
+.big.p2{background:var(--blue);box-shadow:0 6px 0 var(--blue-d)}
+.big:active{transform:translateY(4px);box-shadow:none}
+.big:disabled{background:#2b3466;box-shadow:0 6px 0 #1d2449;color:#7e88bd;cursor:not-allowed}
+.foot{display:flex;flex-wrap:wrap;gap:8px}
+.ghost{border:2px solid rgba(255,255,255,.2);color:var(--soft);border-radius:999px;padding:5px 12px;font-size:12px;font-weight:900}
+.ghost.on{border-color:var(--gold);color:var(--gold)}
+
+.fhead{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.fhead .e{font-family:var(--f-num);font-weight:700;font-size:24px;color:var(--gold)}
+.fhead .t{font-weight:900;color:var(--soft);font-size:14px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;font-weight:900;padding:3px 9px;border-radius:999px;background:rgba(255,255,255,.1);color:var(--soft)}
+.chip.got{background:rgba(47,210,122,.2);color:#8ff0bb}
+.bar{height:10px;background:rgba(255,255,255,.12);border-radius:999px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:linear-gradient(180deg,#ffe07a,var(--gold) 55%,var(--gold-d));border-radius:999px;transition:width .35s cubic-bezier(.3,1.4,.6,1)}
+.qcard{background:#fff;color:var(--ink);border-radius:16px;padding:10px 12px;box-shadow:0 6px 0 #b8bfe3;display:grid;grid-template-columns:auto 1fr;column-gap:12px;align-items:center}
+.qcard.bump{animation:bump .35s}
+.qcard .ico{font-size:38px;grid-row:span 3;line-height:1}
+.qcard .qn{font-weight:900;font-size:17px}
+.qcard .qv{font-family:var(--f-num);font-weight:700;font-size:20px;word-break:break-all}
+.qcard .qo{font-size:12px;color:#59608a;font-weight:600}
+.ans{display:flex;align-items:center;justify-content:center;gap:6px;font-family:var(--f-num);font-weight:700;font-size:26px;background:#0b1029;border-radius:14px;padding:7px 6px;border:2px solid #2a3570}
+.slot{min-width:2.2em;padding:0 .2em;border-radius:8px;border:3px dashed #4b5594;text-align:center;line-height:1.3;color:#fff}
+.slot.e{min-width:1.6em;font-size:.7em;align-self:flex-start;margin-top:-.15em}
+.slot.on{border-color:var(--gold);border-style:solid;background:rgba(255,200,61,.12)}
+.slot.empty{color:#4b5594}
+.slot.ok{border-color:var(--go);border-style:solid;color:var(--go)}
+.slot.no{border-color:var(--no);border-style:solid;color:var(--no)}
+.tools{display:flex;gap:8px;flex-wrap:wrap}
+.tool{background:#e3f1ff;color:#1f72c4;border-radius:999px;padding:6px 14px;font-weight:900;font-size:14px;box-shadow:0 3px 0 #a9cdf0}
+.tool:active{transform:translateY(2px);box-shadow:none}
+.tool.alt{background:#2d3a78;color:#fff;box-shadow:0 3px 0 #1a2350}
+.pad{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.key{background:#2d3a78;border-radius:11px;height:42px;font-family:var(--f-num);font-weight:700;font-size:22px;box-shadow:0 4px 0 #1a2350}
+.key:active{transform:translateY(3px);box-shadow:0 1px 0 #1a2350}
+.key.sw{font-family:var(--f-head);font-size:14px;font-weight:900}
+.key.go{background:var(--go);box-shadow:0 4px 0 var(--go-d);font-family:var(--f-head);font-size:17px;font-weight:900}
+.msg{border-radius:12px;padding:10px 12px;font-weight:700;line-height:1.6;font-size:15px}
+.msg.bad{background:#ffe9ea;color:#8b1f24}
+.msg.good{background:#d6f8e5;color:#0d6b3a}
+.msg.info{background:#eef0fb;color:#2c3466}
+.demo{background:#fff7dc;color:var(--ink);border-radius:12px;padding:7px 10px;border-left:5px solid var(--gold)}
+.demo .dn{font-family:var(--f-num);font-weight:700;font-size:21px;letter-spacing:1px;word-break:break-all}
+.demo .pt{color:#e0475b;font-size:1.2em;display:inline-block;animation:hop .3s}
+@keyframes hop{40%{transform:translateY(-10px)}}
+.demo .dc{font-weight:900;font-size:13px;color:#59608a;margin-top:2px}
+.demo .dr{font-family:var(--f-num);font-weight:700;font-size:16px;margin-top:2px;color:#0d6b3a}
+.tip{color:var(--soft);font-weight:700;font-size:14px;margin:0;line-height:1.6}
+.result{text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;padding:10px 0}
+.result h2{margin:0;font-size:34px;font-weight:900;color:var(--gold);text-shadow:0 4px 0 var(--gold-d)}
+.stars{display:flex;gap:8px;font-size:48px;line-height:1}
+.stars span{color:rgba(255,255,255,.15);transform:scale(.4);opacity:0;animation:starin .45s cubic-bezier(.3,1.7,.5,1) forwards}
+.stars span.on{color:var(--gold);text-shadow:0 4px 0 var(--gold-d)}
+@keyframes starin{to{transform:scale(1);opacity:1}}
+.pill{background:var(--go);color:#fff;font-weight:900;border-radius:14px;padding:12px 20px;font-size:16px;box-shadow:0 5px 0 var(--go-d)}
+.pill.alt{background:#2d3a78;box-shadow:0 5px 0 #1a2350}
+.pill:active{transform:translateY(4px);box-shadow:none}
+.row2{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.combo{font-family:var(--f-num);font-weight:700;color:var(--gold);text-shadow:0 2px 0 var(--gold-d);animation:pop .4s cubic-bezier(.3,1.6,.5,1)}
+.dtop{display:flex;justify-content:space-between;align-items:center;font-weight:900;color:var(--soft);font-size:14px}
+.flyer{position:fixed;font-size:44px;z-index:20;pointer-events:none;transition:transform .65s cubic-bezier(.5,-0.3,.6,1),opacity .65s}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#0b1029;border:2px solid var(--gold);color:#fff;padding:10px 16px;border-radius:12px;font-weight:900;font-size:14px;z-index:30;max-width:90%;text-align:center;animation:pop .3s}
+@keyframes pop{0%{transform:translateX(-50%) scale(.6);opacity:0}100%{transform:translateX(-50%) scale(1);opacity:1}}
+.combo{display:inline-block}
+@keyframes bump{40%{transform:scale(1.04)}}
+@keyframes shake{20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+.shakeit{animation:shake .4s}
+#fx{position:fixed;inset:0;pointer-events:none;z-index:25;width:100%;height:100%}
+
+/* ===== v3：放大、聚焦 ===== */
+#app{max-width:1000px}
+:root{--bw:128px;--kh:clamp(50px,7.2vh,70px);--panel-max:580px}
+.building{width:var(--bw);transition:width .25s}
+body.compact{--bw:74px}
+@media (min-width:700px){:root{--bw:200px}body.compact{--bw:150px}}
+.row .ex{font-size:clamp(14px,2.2vh,20px)}
+.row .nm{font-size:clamp(10px,1.5vh,13px)}
+.row .ic{font-size:clamp(12px,1.8vh,16px)}
+body.compact .row{padding-left:32px}
+body.compact .row .nm,body.compact .row .ic{display:none}
+@media (min-width:700px){body.compact .row .nm,body.compact .row .ic{display:inline}}
+body.compact .row:not(.here){opacity:.5}
+.side{gap:clamp(8px,1.4vh,14px)}
+.side>*{width:100%;max-width:var(--panel-max);align-self:center}
+.top{height:clamp(52px,7vh,64px)}
+.led b{font-size:clamp(22px,3.4vh,30px)}
+.led small{font-size:clamp(13px,1.9vh,17px)}
+.top .home{font-size:clamp(14px,2vh,17px)}
+.title{font-size:clamp(40px,7vh,64px)}
+.lead{font-size:clamp(16px,2.3vh,20px)}
+.big{font-size:clamp(20px,3vh,26px);padding:clamp(14px,2.2vh,22px) 18px}
+.big small{font-size:clamp(13px,1.9vh,16px)}
+.panel{font-size:clamp(15px,2.1vh,18px)}
+.tip{font-size:clamp(15px,2.1vh,18px)}
+.msg{font-size:clamp(15px,2.2vh,19px)}
+/* 題目列 */
+.qhead{display:flex;align-items:center;gap:10px}
+.qhead .e{font-family:var(--f-num);font-weight:700;font-size:clamp(24px,3.6vh,34px);color:var(--gold);white-space:nowrap}
+.qhead .t{font-weight:900;color:var(--soft);font-size:clamp(13px,1.9vh,16px);white-space:nowrap}
+.qhead .cnt{margin-left:auto;font-family:var(--f-num);font-weight:700;font-size:clamp(14px,2vh,18px);background:rgba(255,255,255,.1);border-radius:999px;padding:3px 12px;white-space:nowrap}
+.qhead .back{font-weight:900;font-size:clamp(13px,1.9vh,16px);color:var(--soft);padding:4px 2px;white-space:nowrap}
+/* 題目卡：最大的字給數字 */
+.qcard{display:block;padding:clamp(10px,1.8vh,20px) clamp(12px,2vw,20px)}
+.qtop{display:flex;align-items:center;gap:10px}
+.qcard .ico{font-size:clamp(34px,5.6vh,64px);line-height:1}
+.qcard .qn{font-size:clamp(16px,2.5vh,24px);line-height:1.25}
+.qcard .qo{font-size:clamp(12px,1.8vh,16px)}
+.qcard .qv{font-size:clamp(26px,min(5vh,8.4vw),52px);line-height:1.2;margin-top:4px;white-space:nowrap;word-break:normal}
+.qcard .qv .u{font-size:.55em;margin-left:.2em}
+@media (max-width:430px){.qcard .tool{padding:5px 9px;font-size:13px}}
+.qcard .tool{margin-left:auto;flex:none;font-size:clamp(13px,1.9vh,17px);padding:6px 12px}
+@media (max-width:430px){.qhead .t{display:none}}
+/* 作答格 */
+.ans{font-size:clamp(30px,5.2vh,50px);padding:clamp(8px,1.4vh,14px) 8px;gap:10px}
+.slot{min-width:2.4em;border-width:3px}
+.slot.e{min-width:1.7em;font-size:.68em}
+/* 鍵盤：4 欄，按鍵加大 */
+.pad{grid-template-columns:repeat(4,1fr);gap:clamp(6px,1vh,10px)}
+.key{height:clamp(46px,6.6vh,70px);font-size:clamp(22px,3.6vh,32px);border-radius:14px}
+.key.sw{font-size:clamp(14px,2vh,18px)}
+.key.go{grid-column:span 2;font-size:clamp(18px,2.8vh,24px)}
+/* 小數點跳跳 */
+.demo{padding:clamp(8px,1.4vh,14px) 14px}
+.demo .dn{font-size:clamp(24px,4vh,38px)}
+.demo .dc{font-size:clamp(13px,1.9vh,16px)}
+.demo .dr{font-size:clamp(17px,2.6vh,24px)}
+.dtop{font-size:clamp(14px,2vh,17px)}
+.pill{font-size:clamp(16px,2.4vh,20px);padding:clamp(12px,1.8vh,16px) 22px}
+.result h2{font-size:clamp(32px,5vh,46px)}
+
+@media (max-width:360px){body:not(.compact) .row .ic{display:none}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.stars span{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="top">
+    <button class="home" id="homeBtn" type="button">⌂ 首頁</button>
+    <div class="led" aria-live="polite"><b id="ledE">10<sup>0</sup></b><small id="ledF">地面</small></div>
+    <button class="sound" type="button" data-sound>音效：開</button>
+  </header>
+  <div class="main">
+    <div class="building" aria-label="大樓樓層，點一層可以搭電梯過去">
+      <div class="rows" id="rows"></div>
+      <div class="track" aria-hidden="true"><div class="car" id="car"></div></div>
+    </div>
+    <div class="side" id="side"></div>
+  </div>
+</div>
+<canvas id="fx"></canvas>
+
+<script>
+// ===== DATA-START =====
+const FL=[7,6,5,4,3,2,1,0,-1,-2,-3,-4,-5,-6,-7,-8,-9];
+const ORDER=[0,1,2,3,4,5,6,7,-1,-2,-3,-4,-5,-6,-7,-8,-9];
+// c = 係數（照原本的數字，不四捨五入），e = 次方（公尺）
+const ITEMS=[
+  {id:'earth',c:'1.27',e:7,name:'地球直徑',icon:'🌍',orig:'約 12,700 公里'},
+  {id:'equator',c:'4',e:7,name:'地球赤道一圈',icon:'🧭',orig:'約 40,000 公里'},
+  {id:'geo',c:'3.6',e:7,name:'同步衛星離地高度',icon:'🛰️',orig:'約 36,000 公里'},
+  {id:'moon',c:'3.47',e:6,name:'月球直徑',icon:'🌕',orig:'約 3,470 公里'},
+  {id:'yangtze',c:'6.3',e:6,name:'長江長度',icon:'🏞️',orig:'約 6,300 公里'},
+  {id:'nile',c:'6.65',e:6,name:'尼羅河長度',icon:'🐊',orig:'約 6,650 公里'},
+  {id:'twlen',c:'3.94',e:5,name:'台灣南北長',icon:'🏝️',orig:'394 公里'},
+  {id:'twwid',c:'1.44',e:5,name:'台灣東西寬',icon:'🗺️',orig:'144 公里'},
+  {id:'iss',c:'4',e:5,name:'國際太空站離地高度',icon:'🚀',orig:'約 400 公里'},
+  {id:'marathon',c:'4.2',e:4,name:'馬拉松全程',icon:'🏃',orig:'約 42 公里'},
+  {id:'half',c:'2.1',e:4,name:'半程馬拉松',icon:'👟',orig:'約 21 公里'},
+  {id:'plane',c:'1',e:4,name:'客機飛行高度',icon:'✈️',orig:'約 10 公里'},
+  {id:'yushan',c:'3.952',e:3,name:'玉山高度',icon:'⛰️',orig:'3,952 公尺'},
+  {id:'everest',c:'8.849',e:3,name:'聖母峰高度',icon:'🏔️',orig:'8,849 公尺'},
+  {id:'run1500',c:'1.5',e:3,name:'1500 公尺賽跑',icon:'🥇',orig:'1,500 公尺'},
+  {id:'t101',c:'5.08',e:2,name:'台北 101 高度',icon:'🏙️',orig:'508 公尺'},
+  {id:'track',c:'4',e:2,name:'操場跑道一圈',icon:'🏟️',orig:'400 公尺'},
+  {id:'run100',c:'1',e:2,name:'100 公尺賽跑',icon:'🏁',orig:'100 公尺'},
+  {id:'bus',c:'1.2',e:1,name:'公車長度',icon:'🚌',orig:'約 12 公尺'},
+  {id:'court',c:'2.8',e:1,name:'籃球場長度',icon:'🏀',orig:'28 公尺'},
+  {id:'pool',c:'5',e:1,name:'奧運游泳池長度',icon:'🏊',orig:'50 公尺'},
+  {id:'kid',c:'1.5',e:0,name:'國一學生身高',icon:'🧒',orig:'約 150 公分'},
+  {id:'door',c:'2',e:0,name:'門的高度',icon:'🚪',orig:'約 2 公尺'},
+  {id:'giraffe',c:'5',e:0,name:'長頸鹿身高',icon:'🦒',orig:'約 5 公尺'},
+  {id:'phone',c:'1.5',e:-1,name:'手機長度',icon:'📱',orig:'約 15 公分'},
+  {id:'ruler',c:'3',e:-1,name:'長尺',icon:'📏',orig:'30 公分'},
+  {id:'a4',c:'2.97',e:-1,name:'A4 紙的長邊',icon:'📄',orig:'29.7 公分'},
+  {id:'coin1',c:'2',e:-2,name:'1 元硬幣直徑',icon:'🪙',orig:'20 毫米'},
+  {id:'coin5',c:'2.2',e:-2,name:'5 元硬幣直徑',icon:'🪙',orig:'22 毫米'},
+  {id:'coin10',c:'2.6',e:-2,name:'10 元硬幣直徑',icon:'🪙',orig:'26 毫米'},
+  {id:'ant',c:'5',e:-3,name:'紅螞蟻',icon:'🐜',orig:'約 5 毫米'},
+  {id:'mm',c:'1',e:-3,name:'尺上的一小格',icon:'📐',orig:'1 毫米'},
+  {id:'hair',c:'1',e:-4,name:'頭髮寬度',icon:'💇',orig:'約 0.1 毫米'},
+  {id:'mite',c:'3',e:-4,name:'塵蟎',icon:'🕷️',orig:'約 0.3 毫米'},
+  {id:'lead',c:'5',e:-4,name:'0.5 自動鉛筆筆芯',icon:'✏️',orig:'0.5 毫米'},
+  {id:'card',c:'7.6',e:-4,name:'信用卡厚度',icon:'💳',orig:'約 0.76 毫米'},
+  {id:'silk',c:'1.5',e:-5,name:'蠶絲寬度',icon:'🧵',orig:'約 15 微米'},
+  {id:'cell',c:'1',e:-5,name:'小型細胞',icon:'🫧',orig:'約 10 微米'},
+  {id:'macro',c:'2.1',e:-5,name:'最大的白血球',icon:'⚪',orig:'約 21 微米'},
+  {id:'rbc',c:'7.7',e:-6,name:'紅血球直徑',icon:'🩸',orig:'約 7.7 微米'},
+  {id:'ecoli',c:'2',e:-6,name:'大腸桿菌長度',icon:'🦠',orig:'約 2 微米'},
+  {id:'chloro',c:'8',e:-6,name:'葉綠體',icon:'🌿',orig:'約 8 微米'},
+  {id:'flu',c:'1',e:-7,name:'流感病毒',icon:'🤧',orig:'約 100 奈米'},
+  {id:'red',c:'7',e:-7,name:'紅光的波長',icon:'🔴',orig:'約 700 奈米'},
+  {id:'violet',c:'4',e:-7,name:'紫光的波長',icon:'🟣',orig:'約 400 奈米'},
+  {id:'gate',c:'2.5',e:-8,name:'電晶體閘極',icon:'💻',orig:'約 25 奈米'},
+  {id:'hbv',c:'4.2',e:-8,name:'B 型肝炎病毒',icon:'🧫',orig:'約 42 奈米'},
+  {id:'dna',c:'2',e:-9,name:'DNA 寬度',icon:'🧬',orig:'約 2 奈米'},
+  {id:'membrane',c:'7',e:-9,name:'細胞膜厚度',icon:'🧱',orig:'約 7 奈米'},
+  {id:'cnt',c:'1.2',e:-9,name:'奈米碳管直徑',icon:'🔩',orig:'約 1.2 奈米'}
+];
+const MINUS='−';
+const ex=e=>e<0?MINUS+(-e):String(e);
+const pow10=e=>`10<sup>${ex(e)}</sup>`;
+const fname=f=>f>0?f+'F':f===0?'地面':'B'+(-f);
+const origOf=it=>it.orig.replace(/^約 /,'')===plain(it.c,it.e)+' 公尺'?'':it.orig;
+const itemsOf=f=>ITEMS.filter(i=>i.e===f);
+// 一般寫法（字串運算，避免小數誤差）
+function plainParts(c,e){
+  const [ip,fp='']=c.split('.');const d=ip+fp;
+  if(e>=0){const n=1+e;return {int:d.slice(0,n).padEnd(n,'0'),frac:d.slice(n)};}
+  return {int:'0',frac:'0'.repeat(-e-1)+d};
+}
+function plain(c,e,comma=true){
+  const {int,frac}=plainParts(c,e);
+  const i=comma?int.replace(/\B(?=(\d{3})+(?!\d))/g,','):int;
+  return i+(frac?'.'+frac:'');
+}
+// 小數點跳跳的每一步
+function jumpSteps(c,e){
+  const {int,frac}=plainParts(c,e);const s=int+frac;
+  let p=int.length;let target;
+  if(e>=0)target=1;else{const k=s.search(/[1-9]/);target=k+1;}
+  const steps=[];const dir=target<p?-1:1;
+  steps.push(p);
+  while(p!==target){p+=dir;steps.push(p);}
+  return {s,steps,dir};
+}
+const norm=s=>s.replace(/−/g,'-');
+function check(it,cs,es){
+  if(!cs||!es||es===MINUS)return {ok:false,msg:'兩格都要填：前面是係數，右上角是次方。',kind:'empty'};
+  const cv=parseFloat(cs),ev=parseInt(norm(es),10);
+  if(!isFinite(cv)||!isFinite(ev))return {ok:false,msg:'數字格式不對，再檢查一次。',kind:'fmt'};
+  const tc=parseFloat(it.c);
+  const sameC=Math.abs(cv-tc)<1e-9;
+  if(sameC&&ev===it.e)return {ok:true};
+  const valueEq=cv>0&&Math.abs(Math.log10(cv)+ev-(Math.log10(tc)+it.e))<1e-9;
+  if(!(cv>=1&&cv<10))return {ok:false,kind:'range',ev,
+    msg:valueEq?'大小是對的！可是係數要在 1 到 10 之間：小數點前面只能留一個不是 0 的數字。':'係數要在 1 到 10 之間：小數點前面只能留一個不是 0 的數字。'};
+  if(sameC&&it.e!==0&&ev===-it.e)return {ok:false,kind:'sign',ev,
+    msg:it.e<0?'方向反了：這個東西比 1 公尺小，小數點要往右跳，次方是負的。':'方向反了：這個東西比 1 公尺大，小數點要往左跳，次方是正的。'};
+  if(sameC&&Math.abs(ev-it.e)===1)return {ok:false,kind:'off1',ev,msg:'係數對了，跳的次數差一次。再數一次小數點跳了幾下。'};
+  if(!sameC&&ev===it.e)return {ok:false,kind:'coef',ev,msg:'次方對了！係數的數字再對一次。'};
+  return {ok:false,kind:'other',ev,msg:'再試一次，可以按「跳給我看」。'};
+}
+// ===== DATA-END =====
+
+const $=id=>document.getElementById(id);
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;};
+const reduce=!!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+// ---------- 存檔 ----------
+const KEY='cosmic-elevator-v1';
+let P={done:{},got:{},best:{A:0,B:0}};let T=false;
+function save(){try{localStorage.setItem(KEY,JSON.stringify({p:P,t:T,m:!SND.on}));}catch(e){}}
+function load(){try{const d=JSON.parse(localStorage.getItem(KEY)||'null');if(d){P=Object.assign({done:{},got:{},best:{A:0,B:0}},d.p||{});T=!!d.t;SND.on=!d.m;}}catch(e){}}
+
+// ---------- 音效 ----------
+const SND={ctx:null,on:true};
+function ac(){if(!SND.ctx){try{SND.ctx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){return null;}}if(SND.ctx.state==='suspended')SND.ctx.resume().catch(()=>{});return SND.ctx;}
+function tone(f,dur,type,vol,when,slide){
+  if(!SND.on)return;const c=ac();if(!c)return;
+  try{const t=c.currentTime+(when||0);const o=c.createOscillator(),g=c.createGain();
+    o.type=type||'sine';o.frequency.setValueAtTime(f,t);if(slide)o.frequency.exponentialRampToValueAtTime(slide,t+dur);
+    g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(vol||0.15,t+0.012);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+    o.connect(g);g.connect(c.destination);o.start(t);o.stop(t+dur+0.03);}catch(e){}
+}
+const semi=(f,s)=>f*Math.pow(2,s/12);
+const sfx={
+  tap:()=>tone(700,0.04,'triangle',0.06),
+  pass:k=>tone(semi(880,k%2?0:4),0.06,'sine',0.07),
+  door:()=>{tone(1319,0.18,'sine',0.14);tone(1047,0.3,'sine',0.12,0.15);},
+  right:n=>{const b=semi(523,Math.min(n-1,10));tone(b,0.11,'triangle',0.2);tone(semi(b,7),0.2,'triangle',0.18,0.08);},
+  combo:n=>{[0,4,7,12].forEach((s,i)=>tone(semi(659,s+Math.min(n,8)),0.09,'square',0.05,0.18+i*0.05));},
+  wrong:()=>{tone(196,0.28,'sawtooth',0.09,0,130);tone(147,0.3,'square',0.05,0.05,110);},
+  hop:k=>tone(semi(587,k),0.07,'square',0.06),
+  clear:()=>{[0,4,7,12,7,12,16].forEach((s,i)=>tone(semi(392,s),i===6?0.45:0.14,'triangle',0.18,i*0.1));},
+  star:k=>{tone(semi(988,k*3),0.18,'sine',0.22);},
+  hint:()=>{tone(880,0.07,'sine',0.1);tone(1175,0.1,'sine',0.08,0.06);}
+};
+function syncSound(){document.querySelectorAll('[data-sound]').forEach(b=>{b.textContent='音效：'+(SND.on?'開':'關');b.classList.toggle('off',!SND.on);});}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-sound]');if(!b)return;SND.on=!SND.on;syncSound();save();if(SND.on)sfx.hint();});
+
+// ---------- 特效 ----------
+let parts=[],raf=0;
+function burst(n,y){
+  if(reduce)return;const cv=$('fx');const W=cv.width=innerWidth,H=cv.height=innerHeight;
+  const cols=['#ffc83d','#2fd27a','#4aa8ff','#ff8c42','#ff5a5f','#ffffff'];
+  for(let i=0;i<n;i++)parts.push({x:W*0.6+(Math.random()-.5)*W*0.4,y:y??H*0.35,vx:(Math.random()-.5)*12,vy:-Math.random()*12-4,s:4+Math.random()*6,r:Math.random()*6,vr:(Math.random()-.5)*.4,c:pick(cols),life:90+Math.random()*40});
+  if(!raf)raf=requestAnimationFrame(tick);
+}
+function tick(){const cv=$('fx'),x=cv.getContext('2d');x.clearRect(0,0,cv.width,cv.height);
+  parts=parts.filter(p=>p.life-->0&&p.y<cv.height+20);
+  for(const p of parts){p.vy+=0.38;p.vx*=0.99;p.x+=p.vx;p.y+=p.vy;p.r+=p.vr;x.save();x.translate(p.x,p.y);x.rotate(p.r);x.fillStyle=p.c;x.fillRect(-p.s/2,-p.s/3,p.s,p.s*.66);x.restore();}
+  raf=parts.length?requestAnimationFrame(tick):0;}
+function toast(t){document.querySelectorAll('.toast').forEach(e=>e.remove());const d=document.createElement('div');d.className='toast';d.textContent=t;document.body.appendChild(d);setTimeout(()=>d.remove(),2200);}
+function shake(el){if(!el)return;el.classList.remove('shakeit');void el.offsetWidth;el.classList.add('shakeit');}
+
+// ---------- 大樓 ----------
+const S={mode:'home',at:0,riding:false};
+function lerp(a,b,t){return Math.round(a+(b-a)*t);}
+function rowColor(f){
+  if(f>0){const t=(7-f)/6;return `rgb(${lerp(20,46,t)},${lerp(28,72,t)},${lerp(70,140,t)})`;}
+  if(f===0)return '#2f6b3a';
+  const t=(-f-1)/8;return `rgb(${lerp(110,40,t)},${lerp(76,26,t)},${lerp(50,18,t)})`;
+}
+function unlocked(f){if(T)return true;const i=ORDER.indexOf(f);return i===0||!!P.done[ORDER[i-1]];}
+function rowEl(f){return document.querySelector(`.row[data-f="${f}"]`);}
+function renderShaft(){
+  const box=$('rows');box.innerHTML='';
+  FL.forEach(f=>{
+    const b=document.createElement('button');b.type='button';b.className='row'+(f===0?' ground':'');b.dataset.f=f;
+    b.style.background=rowColor(f);
+    if(!unlocked(f))b.classList.add('lock');
+    if(P.done[f])b.classList.add('done');
+    const icons=itemsOf(f).filter(i=>P.got[i.id]).map(i=>i.icon).join('');
+    b.innerHTML=`<span class="ex">${pow10(f)}</span><span class="nm">${fname(f)}</span><span class="ic">${icons}</span>`;
+    b.setAttribute('aria-label',`${fname(f)}，10 的 ${f} 次方公尺`);
+    b.addEventListener('click',()=>onFloorTap(f));
+    box.appendChild(b);
+  });
+  placeCar(false);markHere();
+}
+function placeCar(anim){
+  const rows=$('rows');const h=rows.clientHeight/FL.length;const car=$('car');
+  if(!anim)car.style.transition='none';
+  car.style.top=(FL.indexOf(S.at)*h+3)+'px';car.style.height=Math.max(h-6,10)+'px';
+  if(!anim){void car.offsetWidth;car.style.transition='';}
+}
+function setLed(f){$('ledE').innerHTML=pow10(f);$('ledF').textContent=fname(f);}
+function markHere(){document.querySelectorAll('.row').forEach(r=>r.classList.toggle('here',+r.dataset.f===S.at));}
+function rideTo(f,cb){
+  if(S.riding)return;S.riding=true;
+  const from=S.at;const steps=Math.abs(FL.indexOf(f)-FL.indexOf(from));
+  const per=reduce?0:190;const dur=Math.max(steps*per,260);
+  const car=$('car');car.style.transition=`top ${dur}ms cubic-bezier(.45,.05,.55,.95)`;
+  S.at=f;placeCar(true);markHere();
+  const dir=f>from?1:-1;let k=0;
+  if(steps>0&&per>0){const t=setInterval(()=>{k++;setLed(from+dir*k);sfx.pass(k);if(k>=steps)clearInterval(t);},per);}
+  setTimeout(()=>{setLed(f);car.classList.add('open');sfx.door();
+    setTimeout(()=>{car.classList.remove('open');S.riding=false;cb&&cb();},380);},dur);
+}
+function onFloorTap(f){
+  if(S.riding)return;
+  if(S.mode==='deliver'){
+    if(S.dmode==='A'&&!S.busy)return sendTo(f);
+    if(S.dmode==='B')return toast('這一關要寫科學記號，電梯會開到你寫的次方那一層');
+    return;
+  }
+  if(!unlocked(f)){
+    toast(f<0&&ORDER.indexOf(f)===8?'先把 0 到 7 樓都逛完，才能下地下室':'先完成前一層，這層才會打開');
+    shake(rowEl(f));return;
+  }
+  S.mode='tour';rideTo(f,()=>enterFloor(f));
+}
+
+// ---------- 輸入 ----------
+function keypadHTML(){
+  const k=['1','2','3','del','4','5','6','sw','7','8','9',MINUS,'.','0','ok'];
+  const lab={del:'⌫',sw:'換格',ok:'確認'};const cls={sw:' sw',ok:' go'};
+  const aria={del:'刪除','.':'小數點',[MINUS]:'負號',sw:'換到另一格',ok:'確認'};
+  return '<div class="pad">'+k.map(x=>`<button class="key${cls[x]||''}" type="button" data-k="${x}" aria-label="${aria[x]||x}">${lab[x]||x}</button>`).join('')+'</div>';
+}
+function ansHTML(){return `<div class="ans" id="ans"><span class="slot c" id="sc" data-slot="c"></span><span>× 10</span><span class="slot e" id="se" data-slot="e"></span></div>`;}
+function bindInput(onOk){
+  S.cs='';S.es='';S.slot='c';
+  document.querySelectorAll('[data-slot]').forEach(el=>el.addEventListener('click',()=>{S.slot=el.dataset.slot;drawAns();}));
+  document.querySelectorAll('.pad .key').forEach(b=>b.addEventListener('click',()=>{const k=b.dataset.k;if(k==='ok')onOk();else press(k);}));
+  S.onOk=onOk;drawAns();
+}
+function press(k){
+  if(S.busy)return;sfx.tap();
+  if(k==='sw'){S.slot=S.slot==='c'?'e':'c';}
+  else if(k==='del'){
+    if(S.slot==='e'){if(S.es)S.es=S.es.slice(0,-1);else S.slot='c';}
+    else S.cs=S.cs.slice(0,-1);
+  }
+  else if(k===MINUS){S.slot='e';S.es=S.es.startsWith(MINUS)?S.es.slice(1):MINUS+S.es;}
+  else if(k==='.'){if(S.slot==='c'&&!S.cs.includes('.'))S.cs=(S.cs||'0')+'.';}
+  else{
+    if(S.slot==='c'){if(S.cs.replace('.','').length<6)S.cs+=k;}
+    else{if(S.es.replace(MINUS,'').length<2)S.es+=k;}
+  }
+  drawAns();
+}
+function drawAns(state){
+  const c=$('sc'),e=$('se');if(!c)return;
+  c.textContent=S.cs||'?';e.textContent=S.es||'?';
+  c.className='slot c'+(S.cs?'':' empty')+(S.slot==='c'?' on':'');
+  e.className='slot e'+(S.es?'':' empty')+(S.slot==='e'?' on':'');
+  if(state){c.classList.add(state);e.classList.add(state);c.classList.remove('on');e.classList.remove('on');}
+}
+document.addEventListener('keydown',e=>{
+  if(!$('sc')||S.busy)return;
+  if(/^[0-9]$/.test(e.key))press(e.key);
+  else if(e.key==='.')press('.');
+  else if(e.key==='-')press(MINUS);
+  else if(e.key==='Backspace')press('del');
+  else if(e.key==='Tab'){e.preventDefault();press('sw');}
+  else if(e.key==='Enter'&&S.onOk){e.preventDefault();S.onOk();}
+});
+
+// ---------- 小數點跳跳 ----------
+function playDemo(box,it,auto){
+  const {s,steps,dir}=jumpSteps(it.c,it.e);
+  box.hidden=false;let i=0;
+  const n=steps.length-1;
+  const draw=()=>{
+    const p=steps[i];
+    const shown=s.slice(0,p)+'<span class="pt">.</span>'+s.slice(p);
+    const side=dir<0?'左':'右';
+    box.innerHTML=`<div class="dn">${shown}</div>`+
+      (i<n?`<div class="dc">小數點往${side}跳：${i} 下</div>`
+          :`<div class="dr">${n===0?'不用跳，次方是 0':`往${side}跳 ${n} 下 → 次方 ${ex(it.e)}`}：${it.c} × ${pow10(it.e)}</div>`);
+  };
+  draw();
+  if(n===0)return;
+  const t=setInterval(()=>{i++;sfx.hop(i);draw();if(i>=n)clearInterval(t);},reduce?0:520);
+}
+
+function focusMode(on){document.body.classList.toggle('compact',!!on);requestAnimationFrame(()=>placeCar(false));}
+
+// ---------- 首頁 ----------
+function home(){
+  S.mode='home';S.busy=false;focusMode(false);
+  const done=FL.filter(f=>P.done[f]).length;
+  const pool=poolItems();
+  $('side').innerHTML=`
+    <h1 class="title">宇宙<span>電梯</span></h1>
+    <p class="lead">這棟大樓的每一層，就是 10 的次方公尺。往上越來越大，往下越來越小。</p>
+    <button class="big p1" type="button" id="goTour">Part 1 樓層導覽<small>一層一層逛，認識每層的東西 · 已完成 ${done} / 17 層</small></button>
+    <button class="big p2" type="button" id="goDeliver" ${pool.length>=3||T?'':'disabled'}>Part 2 送貨任務<small>${pool.length>=3||T?'把打亂的包裹送到正確樓層':'先在 Part 1 完成 2 層樓才會打開'}</small></button>
+    <div class="foot"><button class="ghost${T?' on':''}" type="button" id="teach">${T?'老師模式：已解鎖全部':'老師模式：解鎖全部'}</button><button class="ghost" type="button" id="reset">重設進度</button></div>`;
+  $('goTour').addEventListener('click',()=>{S.mode='tour';tourPanel();});
+  $('goDeliver').addEventListener('click',deliverSelect);
+  $('teach').addEventListener('click',()=>{T=!T;save();renderShaft();home();});
+  let arm=false;$('reset').addEventListener('click',e=>{const b=e.currentTarget;if(!arm){arm=true;b.textContent='再按一次，清除全部進度';b.classList.add('on');setTimeout(()=>{arm=false;if(b.isConnected){b.textContent='重設進度';b.classList.remove('on');}},3000);return;}
+    P={done:{},got:{},best:{A:0,B:0}};T=false;save();renderShaft();home();});
+}
+function tourPanel(){
+  S.mode='tour';S.busy=false;focusMode(false);
+  const next=ORDER.find(f=>unlocked(f)&&!P.done[f]);
+  $('side').innerHTML=`<div class="panel"><b style="font-size:18px">Part 1 樓層導覽</b>
+    <p style="margin:6px 0 0;line-height:1.7;font-weight:600">點左邊大樓的樓層，電梯就會開過去。每一層要把那層的東西寫成科學記號。</p></div>
+    ${next!==undefined?`<button class="big p1" type="button" id="goNext">搭電梯去 ${fname(next)}<small>這一層是 ${pow10(next)} 公尺</small></button>`:'<p class="lead">17 層全部逛完了！去首頁玩 Part 2 送貨任務吧。</p>'}
+    ${(next!==undefined&&next<0&&!P.done[-1])?'<div class="msg info">地下室的次方是負的。還沒學過的話，先做學習單②「往下走的表」再來。</div>':''}`;
+  if(next!==undefined)$('goNext').addEventListener('click',()=>rideTo(next,()=>enterFloor(next)));
+}
+
+// ---------- Part 1 ----------
+function enterFloor(f){
+  S.mode='tour';S.floor=f;const its=itemsOf(f);
+  S.order=shuffle(its);S.need=its.length;S.cnt=0;S.firstQ=!P.done[f];
+  nextTourQ();
+}
+function nextTourQ(){
+  const it=S.order[S.cnt];
+  S.item=it;S.busy=false;
+  const f=S.floor;
+  focusMode(true);
+  $('side').innerHTML=`
+    <div class="qhead"><button class="back" type="button" id="backTour">← 選樓層</button><span class="e">${pow10(f)} 公尺</span><span class="t">${fname(f)}</span><span class="cnt">${S.cnt+1} / ${S.need}</span></div>
+    <div class="qcard" id="qcard"><div class="qtop"><div class="ico" id="qico">${it.icon}</div><div><div class="qn">${it.name}</div><div class="qo">${origOf(it)}</div></div><button class="tool" type="button" id="hintBtn">跳給我看 ▶</button></div><div class="qv">${plain(it.c,it.e)}<span class="u">公尺</span></div></div>
+    <div class="demo" id="demo" hidden></div>
+    <div id="msg"></div>
+    ${ansHTML()}
+    ${keypadHTML()}`;
+  $('hintBtn').addEventListener('click',()=>{sfx.hint();playDemo($('demo'),it);});
+  $('backTour').addEventListener('click',tourPanel);
+  bindInput(submitTour);
+  if(S.firstQ){S.firstQ=false;setTimeout(()=>playDemo($('demo'),it,true),400);}
+}
+function submitTour(){
+  if(S.busy)return;const it=S.item;const r=check(it,S.cs,S.es);
+  if(r.kind==='empty'){$('msg').innerHTML=`<div class="msg info">${r.msg}</div>`;return;}
+  S.busy=true;
+  if(r.ok){
+    drawAns('ok');S.cnt++;
+    const firstGet=!P.got[it.id];P.got[it.id]=true;save();
+    sfx.right(S.cnt);$('qcard').classList.add('bump');fly(it.icon,S.floor);
+    $('msg').innerHTML=`<div class="msg good">${firstGet?'收進圖鑑！':'答對了！'} ${it.name}放在 ${fname(S.floor)}。</div>`;
+    setTimeout(()=>{renderShaftIcons();if(S.cnt>=S.need)floorDone();else nextTourQ();},900);
+  }else{
+    drawAns('no');sfx.wrong();shake($('ans'));
+    $('msg').innerHTML=`<div class="msg bad">${r.msg}</div><div class="tools" style="margin-top:8px"><button class="tool" type="button" id="again">再寫一次</button></div>`;$('msg').scrollIntoView({block:'nearest',behavior:'smooth'});
+    playDemo($('demo'),it);
+    $('again').addEventListener('click',()=>{S.busy=false;S.cs='';S.es='';S.slot='c';$('msg').innerHTML='';$('demo').hidden=true;drawAns();});
+  }
+}
+function renderShaftIcons(){
+  FL.forEach(f=>{const r=rowEl(f);if(!r)return;r.querySelector('.ic').textContent=itemsOf(f).filter(i=>P.got[i.id]).map(i=>i.icon).join('');
+    r.classList.toggle('done',!!P.done[f]);r.classList.toggle('lock',!unlocked(f));});
+}
+function fly(icon,f){
+  if(reduce)return;const src=$('qico');const row=rowEl(f);if(!src||!row)return;
+  const a=src.getBoundingClientRect(),b=row.getBoundingClientRect();
+  const el=document.createElement('div');el.className='flyer';el.textContent=icon;
+  el.style.left=a.left+'px';el.style.top=a.top+'px';document.body.appendChild(el);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{el.style.transform=`translate(${b.right-34-a.left}px,${b.top+b.height/2-26-a.top}px) scale(.35)`;el.style.opacity='.3';}));
+  setTimeout(()=>el.remove(),700);
+}
+function floorDone(){
+  focusMode(false);const f=S.floor;const first=!P.done[f];P.done[f]=true;save();renderShaftIcons();
+  sfx.clear();burst(110);
+  const next=ORDER.find(x=>unlocked(x)&&!P.done[x]);
+  $('side').innerHTML=`<div class="result"><h2>${fname(f)} 完成！</h2>
+    <p class="lead">${itemsOf(f).map(i=>i.icon+' '+i.name).join('、')}<br>都在 ${pow10(f)} 公尺這一層。</p>
+    ${first&&ORDER.indexOf(f)===1?'<div class="msg info">Part 2 送貨任務打開了！回首頁就能玩。</div>':''}
+    ${f===7&&first?'<div class="msg info">地上 8 層全部逛完！地下室的次方是負的，做完學習單②再下去。</div>':''}
+    <div class="row2">${next!==undefined?`<button class="pill" type="button" id="goNext">下一層：${fname(next)}</button>`:''}<button class="pill alt" type="button" id="toHome">回首頁</button></div></div>`;
+  if(next!==undefined)$('goNext').addEventListener('click',()=>rideTo(next,()=>enterFloor(next)));
+  $('toHome').addEventListener('click',home);
+}
+
+// ---------- Part 2 ----------
+function poolItems(){return T?ITEMS.slice():ITEMS.filter(i=>P.done[i.e]);}
+function deliverSelect(){
+  S.mode='dsel';S.busy=false;focusMode(false);
+  const st=n=>'★'.repeat(n)+'<span style="opacity:.3">'+'★'.repeat(3-n)+'</span>';
+  $('side').innerHTML=`<div class="panel"><b style="font-size:18px">Part 2 送貨任務</b>
+    <p style="margin:6px 0 0;line-height:1.7;font-weight:600">包裹的順序打亂了。看清楚它有多大，把它送到正確的樓層。每回合最多 8 個包裹，同一回合不會重複。</p></div>
+    <button class="big p1" type="button" id="mA">按樓層送貨<small>直接點大樓的樓層 · 最佳 ${st(P.best.A||0)}</small></button>
+    <button class="big p2" type="button" id="mB">寫記號送貨<small>寫出科學記號，電梯開到你寫的次方 · 最佳 ${st(P.best.B||0)}</small></button>
+    <p class="tip">包裹只會從你在 Part 1 逛過的樓層出題（目前 ${poolItems().length} 樣東西）。</p>`;
+  $('mA').addEventListener('click',()=>startRound('A'));
+  $('mB').addEventListener('click',()=>startRound('B'));
+}
+function startRound(m){
+  const q=shuffle(poolItems()).slice(0,8);
+  S.mode='deliver';S.dmode=m;S.queue=q;S.k=0;S.mistakes=0;S.streak=0;nextPackage();
+}
+function nextPackage(){
+  if(S.k>=S.queue.length)return finishRound();
+  const it=S.queue[S.k];S.item=it;S.busy=false;S.wrongHere=0;
+  focusMode(S.dmode==='B');
+  $('side').innerHTML=`
+    <div class="dtop"><span>包裹 ${S.k+1} / ${S.queue.length}</span><span id="combo"></span></div>
+    <div class="bar"><i id="bar"></i></div>
+    <div class="qcard" id="qcard"><div class="qtop"><div class="ico" id="qico">📦</div><div><div class="qn">${it.icon} ${it.name}</div><div class="qo">${origOf(it)}</div></div></div><div class="qv">${plain(it.c,it.e)}<span class="u">公尺</span></div></div>
+    <div id="msg">${S.dmode==='A'?'<p class="tip">點左邊大樓的樓層，電梯就會把包裹送過去。</p>':'<p class="tip">寫好科學記號按確認，電梯會開到你寫的次方那一層。</p>'}</div>
+    <div class="demo" id="demo" hidden></div>
+    ${S.dmode==='B'?ansHTML()+keypadHTML():''}`;
+  $('bar').style.width=(S.k/S.queue.length*100)+'%';
+  if(S.streak>=3)$('combo').innerHTML=`<span class="combo">COMBO ×${S.streak}</span>`;
+  if(S.dmode==='B')bindInput(submitDeliver);
+}
+function sendTo(f){
+  if(S.busy)return;S.busy=true;
+  $('msg').innerHTML=`<div class="msg info">電梯出發，開往 ${fname(f)}……</div>`;
+  rideTo(f,()=>arrive(f,true));
+}
+function submitDeliver(){
+  if(S.busy)return;const it=S.item;
+  if(!S.cs||!S.es||S.es===MINUS){$('msg').innerHTML='<div class="msg info">兩格都要填：前面是係數，右上角是次方。</div>';return;}
+  const cv=parseFloat(S.cs),ev=parseInt(norm(S.es),10);
+  if(!(cv>=1&&cv<10)){sfx.wrong();shake($('ans'));S.mistakes++;S.streak=0;
+    $('msg').innerHTML='<div class="msg bad">電梯不肯出發：係數要在 1 到 10 之間，小數點前面只能留一個不是 0 的數字。</div>';return;}
+  if(ev>7||ev<-9){sfx.wrong();shake($('ans'));$('msg').innerHTML=`<div class="msg bad">這棟大樓沒有 ${pow10(ev)} 這一層，再檢查一次次方。</div>`;return;}
+  S.busy=true;
+  $('msg').innerHTML=`<div class="msg info">電梯出發，開往 ${fname(ev)}……</div>`;
+  const coefOk=Math.abs(cv-parseFloat(it.c))<1e-9;
+  rideTo(ev,()=>arrive(ev,coefOk));
+}
+function arrive(f,coefOk){
+  const it=S.item;
+  if(f===it.e&&coefOk){
+    S.streak++;S.k++;P.got[it.id]=true;save();renderShaftIcons();
+    sfx.right(S.streak);if(S.streak>=3)sfx.combo(S.streak);
+    $('qico').textContent=it.icon;$('qcard').classList.add('bump');fly(it.icon,f);
+    if(S.dmode==='B')drawAns('ok');
+    $('msg').innerHTML=`<div class="msg good">送到了！${it.name}剛好放進 ${fname(f)}。</div>`;
+    $('bar').style.width=(S.k/S.queue.length*100)+'%';
+    if(S.streak>=3){$('combo').innerHTML=`<span class="combo">COMBO ×${S.streak}</span>`;burst(30,innerHeight*0.3);}
+    setTimeout(nextPackage,1000);
+    return;
+  }
+  S.mistakes++;S.streak=0;S.wrongHere++;sfx.wrong();shake($('car'));shake(rowEl(f));
+  let m;
+  if(f!==it.e)m=it.e>f?`門一開……包裹太大，塞不進 ${fname(f)}！這一層的東西只有大約 ${pow10(f)} 公尺。`
+                     :`門一開……包裹太小，在 ${fname(f)} 根本找不到！這一層的東西大約有 ${pow10(f)} 公尺。`;
+  else m='樓層對了！可是標籤上的係數寫錯了，再對一次數字。';
+  $('msg').innerHTML=`<div class="msg bad">${m}</div>`+(S.wrongHere>=1?'<div class="tools" style="margin-top:8px"><button class="tool" type="button" id="hintBtn">跳給我看</button></div>':'');
+  if($('hintBtn'))$('hintBtn').addEventListener('click',()=>{sfx.hint();playDemo($('demo'),it);});
+  if(S.dmode==='B'){drawAns('no');setTimeout(()=>{if(S.item===it){S.cs='';S.es='';S.slot='c';drawAns();}},900);}
+  S.busy=false;
+}
+function finishRound(){
+  focusMode(false);
+  const stars=S.mistakes===0?3:S.mistakes<=2?2:1;
+  P.best[S.dmode]=Math.max(P.best[S.dmode]||0,stars);save();
+  sfx.clear();burst(140);[0,1,2].forEach(k=>{if(k<stars)setTimeout(()=>sfx.star(k),500+k*300);});
+  $('side').innerHTML=`<div class="result"><h2>送貨完成！</h2>
+    <div class="stars">${[0,1,2].map(k=>`<span class="${k<stars?'on':''}" style="animation-delay:${0.35+k*0.3}s">★</span>`).join('')}</div>
+    <p class="lead">${S.queue.length} 個包裹全部送達，送錯 ${S.mistakes} 次。</p>
+    <div class="row2"><button class="pill" type="button" id="again">再一回合</button><button class="pill alt" type="button" id="other">換玩法</button><button class="pill alt" type="button" id="toHome">回首頁</button></div></div>`;
+  $('again').addEventListener('click',()=>startRound(S.dmode));
+  $('other').addEventListener('click',deliverSelect);
+  $('toHome').addEventListener('click',home);
+}
+
+$('homeBtn').addEventListener('click',()=>{if(!S.riding)home();});
+window.addEventListener('resize',()=>placeCar(false));
+
+function boot(d){
+  load();
+  if(d&&d.p){P=Object.assign({done:{},got:{},best:{A:0,B:0}},d.p);T=!!d.t;}
+  syncSound();renderShaft();setLed(S.at);home();
+}
+window.claude?.hot?.snapshot?.(()=>({p:P,t:T}));
+window.claude?.hot?.ready?window.claude.hot.ready(boot):boot(window.claude?.hot?.data??{});
+</script>
+</body>
+</html>

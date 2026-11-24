@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>指數塔</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Noto+Sans+TC:wght@600;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* 闖關遊戲感：深藍夜空當舞台，每層樓一個鮮明顏色，按鈕做成厚實可按的方塊。 */
+  --bg:#141b3d;
+  --bg-2:#1f2a5c;
+  --panel:#ffffff;
+  --ink:#1d2340;
+  --gold:#ffc83d;
+  --gold-d:#d99500;
+  --go:#2fd27a;
+  --go-d:#169b52;
+  --no:#ff5a5f;
+  --no-d:#c43a3f;
+  --c1:#2fd27a;--c1d:#169b52;
+  --c2:#ff8c42;--c2d:#cc5e17;
+  --c3:#4aa8ff;--c3d:#1f72c4;
+  --mist:#7d86b3;
+  --lock:#2b3466;--lockd:#1d2449;
+  --f-head:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+  --f-num:"Fredoka","Noto Sans TC",sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:radial-gradient(ellipse at 50% 0%,var(--bg-2) 0%,var(--bg) 70%);background-attachment:fixed;color:#fff;font-family:var(--f-head);-webkit-tap-highlight-color:transparent}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+sup{font-size:.58em;line-height:0;vertical-align:.85em;margin-left:.04em}
+.math{font-family:var(--f-num);font-weight:600}
+.view{display:none;height:100%}
+.view.on{display:flex;flex-direction:column}
+
+/* ---------- 地圖 ---------- */
+#map{overflow-y:auto}
+.maphead{padding:18px 16px 4px;max-width:560px;margin:0 auto;width:100%;display:flex;align-items:flex-end;justify-content:space-between;gap:10px}
+.title{font-weight:900;font-size:48px;line-height:1;margin:0;padding-top:30px;color:var(--gold);text-shadow:0 4px 0 var(--gold-d),0 8px 18px rgba(0,0,0,.45);letter-spacing:.02em}
+.title span{display:inline-block}
+.title .t2{transform:translateY(-.34em);font-size:.78em}
+.title .t3{transform:translateY(-.85em);font-size:.6em;color:#fff;text-shadow:0 3px 0 #9aa3d6}
+.subtitle{margin:8px 0 0;color:#aab3e0;font-size:14px;font-weight:600}
+.hud{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+.starchip{background:rgba(255,200,61,.15);color:var(--gold);border:2px solid rgba(255,200,61,.5);border-radius:999px;padding:5px 12px;font-family:var(--f-num);font-weight:700;font-size:16px}
+.sound{border:2px solid rgba(255,255,255,.25);border-radius:999px;padding:4px 10px;font-size:13px;font-weight:700;color:#cfd5f5}
+.sound.off{opacity:.55}
+.tower{max-width:520px;width:calc(100% - 28px);margin:16px auto 0;display:flex;flex-direction:column-reverse;gap:14px}
+.floor{border-radius:16px;padding:12px;background:rgba(255,255,255,.06);border:2px solid rgba(255,255,255,.08)}
+.floor h2{margin:0 0 10px;font-size:20px;font-weight:900;display:flex;gap:8px;align-items:center}
+.floor h2 .fl{font-family:var(--f-num);font-weight:700;font-size:14px;padding:2px 10px;border-radius:999px;background:var(--fc);color:#fff;box-shadow:0 3px 0 var(--fcd)}
+.floor h2 small{font-size:13px;color:#aab3e0;font-weight:600}
+.f0{--fc:var(--c1);--fcd:var(--c1d)}
+.f1{--fc:var(--c2);--fcd:var(--c2d)}
+.f2{--fc:var(--c3);--fcd:var(--c3d)}
+.f3{--fc:var(--mist);--fcd:#565e8a}
+.tiles{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.tile{position:relative;text-align:left;background:var(--lock);color:#7e88bd;border-radius:14px;padding:10px 12px 9px;min-height:96px;display:flex;flex-direction:column;gap:2px;box-shadow:0 5px 0 var(--lockd);transition:transform .1s}
+.tile .no{font-family:var(--f-num);font-size:13px;font-weight:700;opacity:.9}
+.tile .nm{font-size:18px;font-weight:900;line-height:1.2}
+.tile .ex{font-family:var(--f-num);font-weight:600;font-size:17px}
+.tile .st{margin-top:auto;font-size:17px;letter-spacing:2px;color:var(--gold);text-shadow:0 2px 0 rgba(0,0,0,.25)}
+.tile.open{background:var(--fc);color:#fff;box-shadow:0 5px 0 var(--fcd)}
+.tile.open:active{transform:translateY(4px);box-shadow:0 1px 0 var(--fcd)}
+.tile.now{animation:bob 1.2s ease-in-out infinite;outline:3px solid #fff;outline-offset:3px}
+.tile.now::before{content:"GO!";position:absolute;right:-6px;top:-12px;background:var(--gold);color:var(--ink);font-family:var(--f-num);font-weight:700;font-size:13px;padding:2px 8px;border-radius:999px;box-shadow:0 3px 0 var(--gold-d);transform:rotate(8deg)}
+@keyframes bob{50%{transform:translateY(-4px)}}
+.tile.lock{cursor:not-allowed}
+.tile.lock::after{content:"";position:absolute;right:10px;top:10px;width:15px;height:15px;background:currentColor;
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 7V5a4 4 0 0 1 8 0v2h1v8H3V7zm2 0h4V5a2 2 0 0 0-4 0z'/%3E%3C/svg%3E") center/contain no-repeat;
+  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 7V5a4 4 0 0 1 8 0v2h1v8H3V7zm2 0h4V5a2 2 0 0 0-4 0z'/%3E%3C/svg%3E") center/contain no-repeat}
+.floor.mist{background:repeating-linear-gradient(135deg,rgba(125,134,179,.14) 0 12px,rgba(125,134,179,.06) 12px 24px);border-style:dashed;border-color:rgba(125,134,179,.5)}
+.floor.mist .tile .q{font-family:var(--f-num);font-size:30px;font-weight:700;opacity:.6}
+.floor.mist .tile.explored .st{color:#e7eaff;letter-spacing:0;font-size:12px;text-shadow:none}
+.mapfoot{max-width:560px;margin:0 auto;padding:18px 16px 30px;display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.ghost{border:2px solid rgba(255,255,255,.2);color:#aab3e0;border-radius:999px;padding:6px 14px;font-size:13px;font-weight:700}
+.ghost.on{border-color:var(--gold);color:var(--gold)}
+
+/* ---------- 闖關 ---------- */
+#play{max-width:600px;margin:0 auto;width:100%}
+.bar{display:flex;align-items:center;gap:10px;padding:12px 14px 4px}
+.back{font-size:14px;color:#aab3e0;padding:6px 2px;font-weight:700}
+.lvname{font-weight:900;font-size:18px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar .sound{flex:none}
+.prog{margin:4px 14px 0;height:16px;background:rgba(255,255,255,.12);border-radius:999px;overflow:hidden;position:relative}
+.prog i{display:block;height:100%;width:0;background:linear-gradient(180deg,#ffe07a,var(--gold) 55%,var(--gold-d));border-radius:999px;transition:width .35s cubic-bezier(.3,1.4,.6,1)}
+.prog b{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--f-num);font-size:12px;font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.5)}
+.status{height:34px;display:flex;justify-content:center;align-items:center}
+.combo{font-family:var(--f-num);font-weight:700;font-size:20px;color:var(--gold);text-shadow:0 3px 0 var(--gold-d);animation:pop .4s cubic-bezier(.3,1.6,.5,1)}
+.combo.good{color:var(--go);text-shadow:0 3px 0 var(--go-d)}
+@keyframes pop{0%{transform:scale(.3);opacity:0}100%{transform:scale(1);opacity:1}}
+.card{margin:0 14px;background:var(--panel);color:var(--ink);border-radius:20px;padding:18px 16px 16px;display:flex;flex-direction:column;align-items:center;gap:10px;min-height:200px;justify-content:center;box-shadow:0 7px 0 #b8bfe3}
+.card.bump{animation:bump .35s ease}
+@keyframes bump{40%{transform:scale(1.04)}}
+.card.shake{animation:shake .4s}
+@keyframes shake{20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
+.ask{font-size:15px;color:#59608a;font-weight:900}
+.expr{font-family:var(--f-num);font-weight:700;font-size:clamp(30px,9vw,50px);text-align:center;line-height:1.5;word-break:break-word}
+.expr.long{font-size:clamp(20px,5.8vw,32px)}
+.slot{display:inline-block;min-width:1.3em;padding:0 .2em;border-radius:.2em;background:#fff3c9;border:3px dashed var(--gold-d);text-align:center;color:#9a5c00;line-height:1.25}
+sup .slot{min-width:1.1em;border-width:2px}
+.slot.empty{color:rgba(154,92,0,.35)}
+.slot.ok{background:#d6f8e5;border:3px solid var(--go);color:var(--go-d)}
+.slot.no{background:#ffe1e2;border:3px solid var(--no);color:var(--no-d)}
+.hintbtn{font-size:14px;font-weight:900;color:#1f72c4;border-radius:999px;padding:5px 14px;background:#e3f1ff;box-shadow:0 3px 0 #a9cdf0}
+.hintbtn:active{transform:translateY(2px);box-shadow:0 1px 0 #a9cdf0}
+.hint{font-size:15px;color:#34404e;background:#fff7dc;border-left:4px solid var(--gold);padding:8px 10px;border-radius:6px;width:100%;line-height:1.7;font-weight:600}
+.hint .m,.sheet .m{font-family:var(--f-num);font-weight:600;font-size:1.15em}
+.answer{padding:14px;margin-top:auto}
+.choices{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.choice{background:#fff;color:var(--ink);border-radius:14px;min-height:66px;font-family:var(--f-num);font-weight:700;font-size:26px;padding:8px;box-shadow:0 5px 0 #b8bfe3;transition:transform .06s}
+.choice:active{transform:translateY(4px);box-shadow:0 1px 0 #b8bfe3}
+.choice.ok{background:var(--go);color:#fff;box-shadow:0 5px 0 var(--go-d);animation:bump .35s}
+.choice.no{background:var(--no);color:#fff;box-shadow:0 5px 0 var(--no-d);animation:shake .4s}
+.choice:disabled{cursor:default}
+.pad{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.key{background:#2d3a78;border-radius:12px;height:54px;font-family:var(--f-num);font-weight:700;font-size:24px;box-shadow:0 4px 0 #1a2350}
+.key:active{transform:translateY(3px);box-shadow:0 1px 0 #1a2350}
+.key.wide{grid-column:span 2;font-size:16px}
+.go{background:var(--go);color:#fff;border-radius:12px;height:58px;font-weight:900;font-size:20px;grid-column:span 3;box-shadow:0 5px 0 var(--go-d);text-shadow:0 2px 0 rgba(0,0,0,.15)}
+.go:active{transform:translateY(4px);box-shadow:0 1px 0 var(--go-d)}
+.go.half{grid-column:span 2}
+.giveup{border-radius:12px;font-size:16px;font-weight:900;background:#4b5280;box-shadow:0 4px 0 #2f3560}
+
+/* 回饋面板 */
+.sheet{position:fixed;left:0;right:0;bottom:0;background:#fff;color:var(--ink);border-radius:22px 22px 0 0;padding:18px 18px calc(18px + env(safe-area-inset-bottom));max-width:600px;margin:0 auto;box-shadow:0 -10px 40px rgba(0,0,0,.45);transform:translateY(105%);transition:transform .3s cubic-bezier(.3,1.2,.5,1);max-height:75%;overflow-y:auto;z-index:5;border-top:8px solid var(--no)}
+.sheet.on{transform:none}
+.sheet h3{margin:0 0 8px;font-size:24px;font-weight:900;color:var(--no-d)}
+.sheet .note{background:#ffe9ea;padding:8px 10px;border-radius:8px;margin:0 0 10px;line-height:1.6;font-weight:700}
+.sheet .exp{line-height:1.9;font-size:16px;margin:0 0 10px;font-weight:600}
+.sheet .ans{font-size:15px;color:#59608a;margin:0 0 14px;font-weight:700}
+.sheet .ans b{font-family:var(--f-num);font-size:24px;color:var(--ink)}
+.sheet.mystery{border-top-color:var(--mist);background:#eef0fb}
+.sheet.mystery h3{color:#4a5288}
+.sheet .btn{width:100%;background:var(--c3);color:#fff;border-radius:12px;height:54px;font-weight:900;font-size:18px;box-shadow:0 5px 0 var(--c3d)}
+.sheet .btn:active{transform:translateY(4px);box-shadow:0 1px 0 var(--c3d)}
+.frac{display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle;font-family:var(--f-num);font-weight:600;margin:4px 0}
+.frac span:first-child{border-bottom:2px solid var(--ink);padding:0 6px 2px}
+.frac span:last-child{padding:2px 6px 0}
+.frac s{color:var(--no);text-decoration-thickness:2px}
+
+/* 開場橫幅 */
+.banner{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(20,27,61,.82);z-index:8;pointer-events:none;opacity:0}
+.banner.on{animation:ban 1.1s ease forwards}
+.banner .lv{font-family:var(--f-num);font-weight:700;font-size:22px;color:var(--gold)}
+.banner .nm{font-size:40px;font-weight:900;text-shadow:0 4px 0 rgba(0,0,0,.35)}
+@keyframes ban{0%{opacity:0}15%{opacity:1}75%{opacity:1}100%{opacity:0}}
+.banner.on .nm{animation:pop .45s cubic-bezier(.3,1.6,.5,1)}
+
+/* 結果 */
+#done{align-items:center;justify-content:center;text-align:center;padding:24px;gap:14px}
+#done h2{font-size:44px;margin:0;font-weight:900;color:var(--gold);text-shadow:0 4px 0 var(--gold-d)}
+.bigstars{display:flex;gap:10px;font-size:60px;line-height:1}
+.bigstars span{color:rgba(255,255,255,.15);transform:scale(.4);opacity:0;animation:starin .45s cubic-bezier(.3,1.7,.5,1) forwards}
+.bigstars span.on{color:var(--gold);text-shadow:0 4px 0 var(--gold-d)}
+@keyframes starin{to{transform:scale(1);opacity:1}}
+#done p{color:#cfd5f5;margin:0;line-height:1.7;max-width:26em;font-weight:600}
+.row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+.pill{background:var(--go);color:#fff;font-weight:900;border-radius:14px;padding:14px 26px;font-size:17px;box-shadow:0 5px 0 var(--go-d)}
+.pill:active{transform:translateY(4px);box-shadow:0 1px 0 var(--go-d)}
+.pill.alt{background:#2d3a78;box-shadow:0 5px 0 #1a2350}
+.mistlist{list-style:none;padding:0;margin:4px 0;display:grid;gap:8px;text-align:left}
+.mistlist li{background:rgba(125,134,179,.2);border-radius:10px;padding:9px 12px;font-size:15px;font-weight:700}
+.mistlist .math{font-weight:600}
+#fx{position:fixed;inset:0;pointer-events:none;z-index:9;width:100%;height:100%}
+
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.bigstars span{opacity:1;transform:none}.banner{display:none}}
+</style>
+</head>
+<body>
+
+<section id="map" class="view on" aria-label="關卡地圖">
+  <div class="maphead">
+    <div>
+      <h1 class="title"><span>指</span><span class="t2">數</span><span class="t3">塔</span></h1>
+      <p class="subtitle">從 1 樓開始，一層一層往上爬</p>
+    </div>
+    <div class="hud"><div class="starchip" id="starTotal">★ 0</div><button class="sound" type="button" data-sound>音效：開</button></div>
+  </div>
+  <div class="tower" id="tower"></div>
+  <div class="ground"></div>
+  <div class="mapfoot">
+    <button class="ghost" id="teacherBtn" type="button">老師模式：解鎖全部關卡</button>
+    <button class="ghost" id="resetBtn" type="button">重設進度</button>
+  </div>
+</section>
+
+<section id="play" class="view" aria-label="作答">
+  <div class="bar">
+    <button class="back" id="backBtn" type="button">← 地圖</button>
+    <div class="lvname" id="lvName"></div>
+    <button class="sound" type="button" data-sound>音效：開</button>
+  </div>
+  <div class="prog" aria-hidden="true"><i id="progFill"></i><b id="progTxt"></b></div>
+  <div class="status" id="status" aria-live="polite"></div>
+  <div class="card" id="card">
+    <div class="ask" id="ask"></div>
+    <div class="expr" id="expr"></div>
+    <button class="hintbtn" id="hintBtn" type="button">展開看看</button>
+    <div class="hint" id="hint" hidden></div>
+  </div>
+  <div class="answer" id="answer"></div>
+</section>
+
+<section id="done" class="view" aria-label="過關"></section>
+
+<div class="sheet" id="sheet" role="dialog" aria-modal="false"></div>
+<div class="banner" id="banner" aria-hidden="true"><div class="lv" id="bLv"></div><div class="nm" id="bNm"></div></div>
+<canvas id="fx"></canvas>
+
+<script>
+// ===== GEN-START =====
+const MINUS='−';
+const MAXV=500; // 要算出來的數值不超過 500；10 的次方只要數 0，不受限制
+const SLOT='{{slot}}';
+const ri=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;};
+const pow=(a,n)=>{let r=1;for(let i=0;i<n;i++)r*=a;return r;};
+function fmt(n){const m=Math.abs(n);const s=m>=10000?m.toLocaleString('en-US'):String(m);return (n<0?MINUS:'')+s;}
+const bs=a=>a<0?`(${MINUS}${-a})`:`${a}`;
+const ex=e=>e<0?MINUS+(-e):String(e);
+const pw=(a,e)=>e===1?bs(a):`${bs(a)}<sup>${ex(e)}</sup>`;
+const rep=(a,n)=>Array(n).fill(bs(a)).join(' × ');
+const sup=x=>`<sup>${x}</sup>`;
+
+function numChoices(c,cands,cap=MAXV){
+  const seen=new Set([c]);const ws=[];
+  for(const x of cands){
+    if(ws.length>=3)break;
+    if(!Number.isInteger(x.v)||x.v<=0||x.v>cap||seen.has(x.v))continue;
+    seen.add(x.v);ws.push({html:fmt(x.v),ok:false,note:x.note||''});
+  }
+  let k=1;
+  while(ws.length<3){for(const v of [c+k,c-k]){if(ws.length<3&&v>0&&!seen.has(v)){seen.add(v);ws.push({html:fmt(v),ok:false,note:''});}}k++;}
+  return shuffle([{html:fmt(c),ok:true,note:''},...ws]);
+}
+
+// L1 連乘變指數
+function g1(t){
+  const a=t===0?pick([2,3,4,5]):t===1?ri(2,9):ri(2,12);
+  let n=t===0?ri(2,3):t===1?ri(3,5):ri(4,7);
+  if(a===n)n++;
+  return {kind:'choice',ask:'寫成指數，是哪一個？',html:rep(a,n),
+    choices:shuffle([
+      {html:pw(a,n),ok:true,note:''},
+      {html:pw(n,a),ok:false,note:'底數和指數放反了。下面寫「誰被乘」，右上角寫「乘了幾個」。'},
+      {html:`${a} × ${n}`,ok:false,note:`${a} × ${n} 是 ${n} 個 ${a} 相<b>加</b>，不是相乘。`},
+      {html:pw(a,n+1),ok:false,note:'個數數錯了，再數一次。'}]),
+    display:pw(a,n),
+    explain:`數一數：一共有 <b>${n} 個 ${a}</b> 相乘，所以寫成 <span class="m">${pw(a,n)}</span>。`,
+    hint:`一個一個數，這裡有幾個 ${a}？`};
+}
+// L2 小數字求值
+const L2P=[[[2,3],[3,2],[10,2],[5,2],[6,2],[3,3],[4,2],[2,4],[7,2]],[[2,5],[4,3],[9,2],[8,2],[5,3],[3,4],[2,6],[10,3]],[[11,2],[12,2],[6,3],[7,3],[2,7],[3,5],[4,4],[2,8],[13,2]]];
+function g2(t){
+  const [a,n]=pick(L2P[t]);const v=pow(a,n);
+  return {kind:'choice',ask:'算出來是多少？',html:pw(a,n),
+    choices:numChoices(v,[
+      {v:a*n,note:`${pw(a,n)} 不是 ${a} × ${n}，指數是「乘幾個 ${a}」。`},
+      {v:a+n,note:`指數不是加法，是 ${n} 個 ${a} 相乘。`},
+      {v:pow(n,a),note:`這是 ${pw(n,a)}，底數和指數放反了。`},
+      {v:pow(a,n-1),note:'少乘了一個，再數一次。'}]),
+    display:fmt(v),
+    explain:`<span class="m">${pw(a,n)} = ${rep(a,n)} = ${fmt(v)}</span>`,
+    hint:`展開：<span class="m">${pw(a,n)} = ${rep(a,n)}</span>`};
+}
+// L3 大數字
+const L3P=[[[2,6],[3,4],[10,3],[10,4],[5,3],[4,3],[2,5],[8,2]],[[2,7],[3,5],[6,3],[4,4],[10,5],[10,6],[7,3],[15,2]],[[2,8],[7,3],[3,5],[4,4],[10,7],[10,8],[10,9],[20,2],[6,3],[14,2],[22,2],[12,2]]];
+function chain(a,n){const p=[];for(let i=1;i<=n;i++)p.push(fmt(pow(a,i)));return p.join(' → ');}
+function g3(t){
+  const [a,n]=pick(L3P[t]);const v=pow(a,n);const ten=a===10;
+  return {kind:'choice',ask:'算出來是多少？',html:pw(a,n),
+    choices:numChoices(v,[
+      {v:pow(a,n-1),note:'少乘了一個。'},
+      {v:pow(a,n+1),note:'多乘了一個。'},
+      {v:a*n,note:`${pw(a,n)} 不是 ${a} × ${n}。`}],ten?Infinity:MAXV),
+    display:fmt(v),
+    explain:ten?`10 的 ${n} 次方，就是 1 後面接 <b>${n} 個 0</b>：<span class="m">${fmt(v)}</span>`
+               :`一次乘一個 ${a}，往上疊 ${n} 層：<br><span class="m">${chain(a,n)}</span>`,
+    hint:ten?'<span class="m">10<sup>2</sup> = 100，10<sup>3</sup> = 1000</span>，數數看有幾個 0。'
+            :`從 ${a} 開始，每次再乘 ${a}：<span class="m">${chain(a,Math.min(3,n))} → …</span>`};
+}
+// L4 兩種底數（質因數分解）
+const L4B=[[2,3],[2,5],[3,5],[2,7]];
+function g4(t){
+  if(t<2){
+    const [b1,b2]=t===0?pick([[2,3],[2,5]]):pick(L4B);
+    const top=t===0?2:3;
+    let e1,e2,v;
+    do{e1=ri(1,top);e2=ri(1,top);v=pow(b1,e1)*pow(b2,e2);}while((e1===1&&e2===1)||v>MAXV);
+    return {kind:'choice',ask:'算出來是多少？',html:`${pw(b1,e1)} × ${pw(b2,e2)}`,
+      choices:numChoices(v,[
+        {v:pow(b1,e2)*pow(b2,e1),note:'兩個指數對調了，每個數字只看自己右上角的指數。'},
+        {v:b1*e1*b2*e2,note:'指數不是拿來乘的，要展開成連乘。'},
+        {v:pow(b1,e1)+pow(b2,e2),note:'中間是乘號，不是加號。'},
+        {v:v*b1,note:`多乘了一個 ${b1}。`}]),
+      display:fmt(v),
+      explain:`<span class="m">${pw(b1,e1)} × ${pw(b2,e2)}<br>= ${rep(b1,e1)} × ${rep(b2,e2)}<br>= ${fmt(pow(b1,e1))} × ${fmt(pow(b2,e2))} = ${fmt(v)}</span>`,
+      hint:`先各自算：<span class="m">${pw(b1,e1)}</span> 是多少？<span class="m">${pw(b2,e2)}</span> 是多少？再相乘。`};
+  }
+  const [b1,b2]=pick(L4B);let e1,e2,N;
+  do{e1=ri(1,4);e2=ri(1,3);N=pow(b1,e1)*pow(b2,e2);}while(N>MAXV||e1===e2);
+  const H=(x,y)=>`${pw(b1,x)} × ${pw(b2,y)}`;
+  const cand=[[e2,e1],[e1+1,e2],[e1,e2+1],[e1-1,e2],[e1,e2-1],[e1+1,e2-1]].filter(([x,y])=>x>=1&&y>=1&&!(x===e1&&y===e2));
+  const seen=new Set([H(e1,e2)]);const ws=[];
+  for(const [x,y] of shuffle(cand)){
+    if(ws.length>=3)break;const h=H(x,y);if(seen.has(h))continue;seen.add(h);
+    ws.push({html:h,ok:false,note:`<span class="m">${h} = ${fmt(pow(b1,x)*pow(b2,y))}</span>，不是 ${N}。`});
+  }
+  const facts=[...Array(e1).fill(b1),...Array(e2).fill(b2)].join(' × ');
+  return {kind:'choice',ask:'寫成質因數的指數，是哪一個？',html:String(N),
+    choices:shuffle([{html:H(e1,e2),ok:true,note:''},...ws]),display:H(e1,e2),
+    explain:`<span class="m">${N} = ${facts}</span><br>有 <b>${e1} 個 ${b1}</b>、<b>${e2} 個 ${b2}</b>，所以是 <span class="m">${H(e1,e2)}</span>。`,
+    hint:`用短除法：先一直除以 ${b1}，除不下去再除以 ${b2}。`};
+}
+// L5 負數當底數
+const L5P=[[[-1,2],[-1,3],[-2,2],[-2,3],[-3,2],[-1,4],[-1,5]],[[-2,4],[-2,5],[-3,3],[-5,2],[-4,2],[-10,2],[-4,3]],[[-2,6],[-3,4],[-1,9],[-1,12],[-1,15],[-5,3],[-2,7],[-3,5],[-2,8],[-7,3],[-10,3],[-10,4],[-10,5]]];
+function g5(t){
+  const [a,n]=pick(L5P[t]);const v=pow(a,n);const m=pow(-a,n);const odd=n%2===1;
+  return {kind:'input',ask:'算出來是多少？',html:`${pw(a,n)} = ${SLOT}`,answers:[String(v)],display:fmt(v),
+    explain:`① 數負號：${n} 個 <span class="m">${bs(a)}</span> 相乘，有 <b>${n} 個負號</b><br>② ${n} 是${odd?'奇':'偶'}數 → 答案是<b>${odd?'負':'正'}</b>的<br>③ 數字：<span class="m">${pw(-a,n)} = ${fmt(m)}</span>`,
+    hint:'照三步驟：先數負號有幾個，再決定正負，最後算數字。',
+    diagnose:x=>x===String(-v)?'數字算對了，正負號錯了。再數一次負號有幾個。':(x===String(a*n)?`<span class="m">${pw(a,n)}</span> 不是 ${bs(a)} × ${n}。`:'')};
+}
+// L6 括號包住誰
+function g6(t){
+  const a=ri(2,5);let n=ri(2,4);if(a>=4&&n>3)n=3;
+  const form=t===2?pick(['np','p','nn']):pick(['np','p']);
+  const P=pow(a,n);
+  if(form==='np'){
+    const v=-P;
+    return {kind:'input',ask:'算出來是多少？',html:`${MINUS}${a}${sup(n)} = ${SLOT}`,answers:[String(v)],display:fmt(v),
+      explain:`括號沒有包住負號，被乘的只有 ${a}：<br><span class="m">${MINUS}${a}<sup>${n}</sup> = ${MINUS}(${rep(a,n)}) = ${fmt(v)}</span>`,
+      hint:'括號包住誰，誰就被乘。這一題有括號嗎？',
+      diagnose:x=>(n%2===0&&x===String(P))?'沒有括號，負號沒有被乘，它只是放在最前面。':''};
+  }
+  if(form==='p'){
+    const v=pow(-a,n);
+    return {kind:'input',ask:'算出來是多少？',html:`(${MINUS}${a})${sup(n)} = ${SLOT}`,answers:[String(v)],display:fmt(v),
+      explain:`括號包住 ${MINUS}${a}，所以是 ${n} 個 (${MINUS}${a}) 相乘：<br><span class="m">${rep(-a,n)} = ${fmt(v)}</span>`,
+      hint:'括號包住誰，誰就被乘。',
+      diagnose:x=>x===String(-v)?'括號包住了負號，負號也要一起數。':''};
+  }
+  const inner=pow(-a,n),v=-inner;
+  return {kind:'input',ask:'算出來是多少？',html:`${MINUS}(${MINUS}${a})${sup(n)} = ${SLOT}`,answers:[String(v)],display:fmt(v),
+    explain:`先算括號的次方：<span class="m">(${MINUS}${a})<sup>${n}</sup> = ${fmt(inner)}</span><br>最前面還有一個負號，再翻一次：<span class="m">${fmt(v)}</span>`,
+    hint:'先算括號那一包，最前面的負號最後再翻。',
+    diagnose:x=>x===String(inner)?'最前面那個負號還沒翻。':''};
+}
+// L7 同底數相乘
+const BASES=[[2,3,5,10],[2,3,5,7,10],[2,3,5,7,10,-2,-3]];
+function g7(t){
+  const a=pick(BASES[t]);const b=bs(a);let ms;
+  if(t===0)ms=[ri(2,3),ri(2,3)];
+  else if(t===1)ms=[ri(1,6),ri(1,6)];
+  else ms=Math.random()<0.35?[ri(2,9),ri(2,9),ri(2,9)]:[ri(5,20),ri(5,20)];
+  if(ms.every(m=>m===1))ms[0]=2;
+  const s=ms.reduce((x,y)=>x+y,0);const p=ms.reduce((x,y)=>x*y,1);
+  const counts=ms.map(m=>`${m} 個`).join(' + ');
+  const exp=ms.map(m=>m===1?b:`(${rep(a,m)})`).join(' × ');
+  return {kind:'input',ask:'指數是多少？',html:ms.map(m=>pw(a,m)).join(' × ')+` = ${b}${sup(SLOT)}`,answers:[String(s)],display:`${b}<sup>${s}</sup>`,
+    explain:`把 ${b} 合在一起數：${counts} = <b>${s} 個 ${b}</b>`+(s<=9?`<br><span class="m">${exp}</span>`:'')+(ms.includes(1)?`<br>沒寫指數的 ${b}，就是 1 個 ${b}。`:''),
+    hint:s<=9?`展開看看：<span class="m">${exp}</span>`:`太長寫不完，用數的：${counts}，一共幾個？`,
+    diagnose:x=>(x===String(p)&&p!==s)?'這裡是把兩堆合在一起，要用「加」的，不是乘。':''};
+}
+// L8 次方的次方
+function g8(t){
+  const a=pick(BASES[t]);const b=bs(a);let m,n;
+  if(t===0){m=ri(2,3);n=ri(2,3);}else if(t===1){m=ri(2,5);n=ri(2,4);}else{m=ri(2,12);n=ri(3,10);}
+  const p=m*n;
+  return {kind:'input',ask:'指數是多少？',html:`(${pw(a,m)})${sup(n)} = ${b}${sup(SLOT)}`,answers:[String(p)],display:`${b}<sup>${p}</sup>`,
+    explain:`<span class="m">${pw(a,m)}</span> 是一包 ${m} 個 ${b}，一共 ${n} 包：<b>${m} × ${n} = ${p} 個</b>`+(p<=12?`<br><span class="m">(${pw(a,m)})<sup>${n}</sup> = ${Array(n).fill(pw(a,m)).join(' × ')}</span>`:''),
+    hint:`<span class="m">(${pw(a,m)})<sup>${n}</sup></span> 就是 ${n} 包 <span class="m">${pw(a,m)}</span>。一包有幾個 ${b}？`,
+    diagnose:x=>(x===String(m+n)&&m+n!==p)?`這是 ${n} 包、每包 ${m} 個，要用乘的。`:''};
+}
+// L9 同底數相除
+function g9(t){
+  const a=pick(BASES[t]);const b=bs(a);let m,n;
+  if(t===0){m=ri(3,5);n=ri(1,2);}else if(t===1){m=ri(4,9);n=ri(1,m-1);}else{m=ri(10,25);n=ri(2,m-2);}
+  const d=m-n;let frac='';
+  if(m<=7){
+    const top=Array.from({length:m},(_,i)=>i<n?`<s>${b}</s>`:b).join(' × ');
+    const bot=Array(n).fill(`<s>${b}</s>`).join(' × ');
+    frac=`<br><span class="frac"><span>${top}</span><span>${bot}</span></span>`;
+  }
+  return {kind:'input',ask:'指數是多少？',html:`${pw(a,m)} ÷ ${pw(a,n)} = ${b}${sup(SLOT)}`,answers:[String(d)],display:`${b}<sup>${d}</sup>`,
+    explain:`寫成分數：上面 ${m} 個 ${b}，下面 ${n} 個 ${b}，約分劃掉 ${n} 個，剩下 <b>${m} − ${n} = ${d} 個</b>${frac}`,
+    hint:`上面有 ${m} 個 ${b}，下面有 ${n} 個。劃掉一樣多的，上面剩幾個？`,
+    diagnose:x=>(m%n===0&&x===String(m/n)&&m/n!==d)?'除法是把一樣的「劃掉」，不是把指數相除。':(x===String(m+n)?'除法要劃掉，個數會變少，不會變多。':'')};
+}
+// L10 配對
+function g10(t){
+  const n=t===0?ri(2,3):t===1?ri(3,6):ri(2,6);
+  const form=t===0?pick(['split','pair10']):t===1?pick(['split','pair10','pair6']):pick(['val','val10','pair10','pair6']);
+  if(form==='split'){
+    const [x,y]=pick([[2,3],[3,5],[2,7],[5,7]]);
+    return {kind:'input',ask:'指數是多少？',html:`(${x} × ${y})${sup(n)} = ${pw(x,n)} × ${y}${sup(SLOT)}`,answers:[String(n)],display:`${y}<sup>${n}</sup>`,
+      explain:`<span class="m">(${x} × ${y})<sup>${n}</sup></span> 是 ${n} 包 (${x} × ${y})。每包有一個 ${x}、一個 ${y}，所以 ${y} 也有 <b>${n} 個</b>。`,
+      hint:`把 ${n} 包 (${x} × ${y}) 寫出來，數數看有幾個 ${y}。`};
+  }
+  if(form==='pair10'||form==='pair6'){
+    const [x,y]=form==='pair10'?[2,5]:[2,3];const z=x*y;
+    return {kind:'input',ask:'指數是多少？',html:`${pw(x,n)} × ${pw(y,n)} = ${z}${sup(SLOT)}`,answers:[String(n)],display:`${z}<sup>${n}</sup>`,
+      explain:`一個 ${x} 配一個 ${y}，變成一個 ${z}。${x} 和 ${y} 各有 ${n} 個，可以配成 <b>${n} 對</b>。`,
+      hint:`${x} × ${y} = ${z}。${n} 個 ${x} 和 ${n} 個 ${y}，可以配成幾對？`,
+      diagnose:v=>v===String(2*n)?`每一對要一個 ${x} 和一個 ${y}，問的是配成幾「對」。`:''};
+  }
+  if(form==='val10'){
+    const k=ri(2,6);const v=pow(10,k);
+    return {kind:'input',ask:'算出來是多少？',html:`${pw(2,k)} × ${pw(5,k)} = ${SLOT}`,answers:[String(v)],display:fmt(v),
+      explain:`2 和 5 配成 ${k} 對，每對是 10：<span class="m">10<sup>${k}</sup></span>，就是 1 後面接 <b>${k} 個 0</b>：<span class="m">${fmt(v)}</span>`,
+      hint:'先配對：一個 2 配一個 5 是多少？可以配幾對？'};
+  }
+  // 算出值：配對後 (x×y)^k 不超過 500
+  const [x,y,k]=pick([[2,5,2],[2,3,2],[2,3,3],[3,5,2],[2,7,2],[4,5,2],[3,7,2]]);const z=x*y;const v=pow(z,k);
+  return {kind:'input',ask:'算出來是多少？',html:`${pw(x,k)} × ${pw(y,k)} = ${SLOT}`,answers:[String(v)],display:fmt(v),
+    explain:`一個 ${x} 配一個 ${y} 變成 ${z}，配成 ${k} 對：<span class="m">${z}<sup>${k}</sup> = ${rep(z,k)} = ${fmt(v)}</span>`,
+    hint:`先配對：${x} × ${y} 是多少？可以配幾對？`};
+}
+function g11(t){return pick([g7,g8,g9,g10])(Math.max(1,t));}
+
+// 迷霧區：照樣出題，不給答案
+const MYST={
+  M1:{qs:[
+      {html:`5${sup(0)} = ${SLOT}`,answers:['1']},
+      {html:`(${MINUS}3)${sup(0)} = ${SLOT}`,answers:['1']},
+      {html:`10${sup(0)} = ${SLOT}`,answers:['1']}],
+    right:'你寫的數字和答案一樣。可是「0 個數相乘」到底是什麼？你說得出為什麼嗎？',
+    wrong:'0 次方就是「一個都沒有乘」。一個都沒乘，答案是多少？連乘的意思在這裡用不上了。'},
+  M2:{frac:true,qs:[
+      {html:`10${sup(MINUS+'1')} = ${SLOT}`,answers:['0.1','1/10']},
+      {html:`2${sup(MINUS+'1')} = ${SLOT}`,answers:['0.5','1/2']},
+      {html:`10${sup(MINUS+'2')} = ${SLOT}`,answers:['0.01','1/100']}],
+    right:'答案碰對了！可是「連乘負 1 次」是什麼意思？你說得出為什麼嗎？',
+    wrong:'指數是負的：連乘 −1 次？乘的次數怎麼會是負的？現在的規則沒辦法回答。'},
+  M3:{qs:[
+      {html:`2${sup(5)} × 2${sup(MINUS+'3')} = 2${sup(SLOT)}`,answers:['2']},
+      {html:`10${sup(6)} × 10${sup(MINUS+'2')} = 10${sup(SLOT)}`,answers:['4']},
+      {html:`3${sup(MINUS+'2')} × 3${sup(MINUS+'1')} = 3${sup(SLOT)}`,answers:['-3']}],
+    right:'你照「個數相加」的規則算出來了。可是「負 3 個 2」要怎麼數？這樣加真的可以嗎？',
+    wrong:'「負 3 個 2」要怎麼數？數不出來，就合不起來。'},
+  M4:{qs:[
+      {html:`2${sup(3)} ÷ 2${sup(5)} = 2${sup(SLOT)}`,answers:['-2']},
+      {html:`10${sup(2)} ÷ 10${sup(6)} = 10${sup(SLOT)}`,answers:['-4']},
+      {html:`5 ÷ 5${sup(3)} = 5${sup(SLOT)}`,answers:['-2']}],
+    right:'你照「劃掉相減」的規則算出負數了。可是指數是負的，代表什麼？',
+    wrong:'上面的個數比下面少，劃一劃，上面一個都不剩，下面還多出來。這時候指數要寫多少？'}
+};
+// 同一關不出重複的題目：先在目前難度找沒出過的，找不到再往鄰近難度找
+function pickFresh(gen,t,seen){
+  let q;
+  for(const tt of [t,Math.max(0,t-1),Math.min(2,t+1)]){
+    for(let n=0;n<60;n++){q=gen(tt);if(!seen.has(q.html)){seen.add(q.html);return q;}}
+  }
+  seen.add(q.html);return q;
+}
+// ===== GEN-END =====
+
+// ---------- 音效（Web Audio 即時合成）----------
+const SND={ctx:null,on:true};
+function ac(){
+  if(!SND.ctx){try{SND.ctx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){return null;}}
+  if(SND.ctx.state==='suspended')SND.ctx.resume().catch(()=>{});
+  return SND.ctx;
+}
+function tone(f,dur,type,vol,when,slide){
+  if(!SND.on)return;const c=ac();if(!c)return;
+  try{
+    const t=c.currentTime+(when||0);const o=c.createOscillator(),g=c.createGain();
+    o.type=type||'sine';o.frequency.setValueAtTime(f,t);if(slide)o.frequency.exponentialRampToValueAtTime(slide,t+dur);
+    g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(vol||0.15,t+0.012);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+    o.connect(g);g.connect(c.destination);o.start(t);o.stop(t+dur+0.03);
+  }catch(e){}
+}
+const semi=(f,s)=>f*Math.pow(2,s/12);
+const sfx={
+  tap:()=>tone(700,0.04,'triangle',0.06),
+  right:n=>{const b=semi(523,Math.min(n-1,10));tone(b,0.11,'triangle',0.2);tone(semi(b,7),0.2,'triangle',0.18,0.08);},
+  combo:n=>{[0,4,7,12].forEach((s,i)=>tone(semi(659,s+Math.min(n,8)),0.09,'square',0.05,0.18+i*0.05));},
+  wrong:()=>{tone(196,0.28,'sawtooth',0.09,0,130);tone(147,0.3,'square',0.05,0.05,110);},
+  start:()=>{tone(392,0.09,'square',0.07);tone(523,0.09,'square',0.07,0.1);tone(784,0.18,'square',0.07,0.2);},
+  clear:()=>{[0,4,7,12,7,12,16].forEach((s,i)=>tone(semi(392,s),i===6?0.45:0.14,'triangle',0.18,i*0.1));},
+  star:k=>{tone(semi(988,k*3),0.18,'sine',0.22);tone(semi(1976,k*3),0.12,'sine',0.06,0.02);},
+  hint:()=>{tone(880,0.07,'sine',0.1);tone(1175,0.1,'sine',0.08,0.06);},
+  mystery:()=>{tone(311,0.7,'sine',0.1,0,233);tone(466,0.7,'triangle',0.06,0.12,370);}
+};
+function syncSound(){document.querySelectorAll('[data-sound]').forEach(b=>{b.textContent='音效：'+(SND.on?'開':'關');b.classList.toggle('off',!SND.on);});}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-sound]');if(!b)return;SND.on=!SND.on;syncSound();save();if(SND.on)sfx.hint();});
+
+// ---------- 特效 ----------
+const reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+function fxCard(cls){const c=$('card');c.classList.remove('bump','shake');void c.offsetWidth;c.classList.add(cls);}
+function banner(lv,nm){if(reduce)return;const b=$('banner');$('bLv').textContent=lv;$('bNm').textContent=nm;b.classList.remove('on');void b.offsetWidth;b.classList.add('on');}
+let parts=[],raf=0;
+function burst(n,y){
+  if(reduce)return;const cv=$('fx');const W=cv.width=innerWidth,H=cv.height=innerHeight;
+  const cols=['#ffc83d','#2fd27a','#4aa8ff','#ff8c42','#ff5a5f','#ffffff'];
+  for(let i=0;i<n;i++)parts.push({x:W/2+(Math.random()-.5)*W*0.3,y:y??H*0.3,vx:(Math.random()-.5)*12,vy:-Math.random()*13-4,g:0.38,s:4+Math.random()*6,r:Math.random()*6,vr:(Math.random()-.5)*.4,c:pick(cols),life:90+Math.random()*40});
+  if(!raf)raf=requestAnimationFrame(tick);
+}
+function tick(){
+  const cv=$('fx'),x=cv.getContext('2d');x.clearRect(0,0,cv.width,cv.height);
+  parts=parts.filter(p=>p.life-->0&&p.y<cv.height+20);
+  for(const p of parts){p.vy+=p.g;p.vx*=0.99;p.x+=p.vx;p.y+=p.vy;p.r+=p.vr;x.save();x.translate(p.x,p.y);x.rotate(p.r);x.fillStyle=p.c;x.fillRect(-p.s/2,-p.s/3,p.s,p.s*0.66);x.restore();}
+  raf=parts.length?requestAnimationFrame(tick):0;
+}
+
+const LEVELS=[
+  {id:'L1',floor:0,name:'連乘變指數',ex:'3 × 3 × 3',gen:g1},
+  {id:'L2',floor:0,name:'算出次方',ex:'2<sup>3</sup> = ?',gen:g2},
+  {id:'L3',floor:0,name:'大一點的數',ex:'2<sup>8</sup>、10<sup>6</sup>',gen:g3},
+  {id:'L4',floor:0,name:'兩種底數',ex:'2<sup>3</sup> × 3<sup>2</sup>',gen:g4},
+  {id:'L5',floor:1,name:'負數當底數',ex:'(−2)<sup>3</sup>',gen:g5},
+  {id:'L6',floor:1,name:'括號包住誰',ex:'−3<sup>2</sup>、(−3)<sup>2</sup>',gen:g6},
+  {id:'L7',floor:2,name:'同底數相乘',ex:'2<sup>3</sup> × 2<sup>4</sup>',gen:g7},
+  {id:'L8',floor:2,name:'次方的次方',ex:'(2<sup>3</sup>)<sup>2</sup>',gen:g8},
+  {id:'L9',floor:2,name:'同底數相除',ex:'2<sup>5</sup> ÷ 2<sup>2</sup>',gen:g9},
+  {id:'L10',floor:2,name:'配對成 10',ex:'2<sup>4</sup> × 5<sup>4</sup>',gen:g10},
+  {id:'L11',floor:2,name:'指數律大亂鬥',ex:'全部混在一起',gen:g11},
+  {id:'M1',floor:3,name:'0 的次方',ex:'5<sup>0</sup>',mystery:true},
+  {id:'M2',floor:3,name:'負的指數',ex:'10<sup>−1</sup>',mystery:true},
+  {id:'M3',floor:3,name:'負指數相乘',ex:'2<sup>5</sup> × 2<sup>−3</sup>',mystery:true},
+  {id:'M4',floor:3,name:'越除越少',ex:'2<sup>3</sup> ÷ 2<sup>5</sup>',mystery:true}
+];
+const FLOORS=[
+  {name:'1F',sub:'指數是什麼'},
+  {name:'2F',sub:'負數當底數'},
+  {name:'3F',sub:'指數律'},
+  {name:'頂樓',sub:'迷霧區：規則還沒學到'}
+];
+const GOAL=8;
+const KEY='zhishu-tower-v1';
+
+let P={};let T=false;
+function save(){try{localStorage.setItem(KEY,JSON.stringify({p:P,t:T,m:!SND.on}));}catch(e){}}
+function load(){try{const d=JSON.parse(localStorage.getItem(KEY)||'null');if(d){P=d.p||{};T=!!d.t;SND.on=!d.m;}}catch(e){}}
+
+const $=id=>document.getElementById(id);
+function show(id){document.querySelectorAll('.view').forEach(v=>v.classList.toggle('on',v.id===id));}
+function unlocked(i){
+  if(T||i===0)return true;
+  const L=LEVELS[i];
+  if(L.mystery)return !!(P.L11&&P.L11.done);
+  return !!(P[LEVELS[i-1].id]&&P[LEVELS[i-1].id].done);
+}
+function starStr(n){return '★'.repeat(n)+'<span style="opacity:.3">'+'★'.repeat(3-n)+'</span>';}
+
+function renderMap(){
+  const tw=$('tower');tw.innerHTML='';
+  let total=0,current=-1;
+  LEVELS.forEach((L,i)=>{if(P[L.id]&&P[L.id].stars)total+=P[L.id].stars;if(current<0&&unlocked(i)&&!(P[L.id]&&(P[L.id].done||P[L.id].explored)))current=i;});
+  $('starTotal').textContent='★ '+total+' / 33';
+  FLOORS.forEach((F,fi)=>{
+    const fl=document.createElement('div');fl.className='floor f'+fi+(fi===3?' mist':'');
+    fl.innerHTML=`<h2><span class="fl">${F.name}</span>${F.sub}</h2><div class="tiles"></div>`;
+    const box=fl.querySelector('.tiles');
+    LEVELS.forEach((L,i)=>{
+      if(L.floor!==fi)return;
+      const open=unlocked(i);const pr=P[L.id]||{};
+      const b=document.createElement('button');b.type='button';
+      b.className='tile'+(open?' open':' lock')+(i===current?' now':'')+(pr.explored?' explored':'');
+      const no=L.mystery?'？':String(i+1);
+      let body;
+      if(L.mystery&&!open)body=`<span class="no">？？？</span><span class="q">?</span>`;
+      else body=`<span class="no">第 ${no} 關</span><span class="nm">${L.name}</span><span class="ex">${L.ex}</span>`+
+        (L.mystery?`<span class="st">${pr.explored?'已探索，等待新規則':''}</span>`:`<span class="st">${pr.done?starStr(pr.stars):''}</span>`);
+      b.innerHTML=body;
+      b.setAttribute('aria-label',(open?'':'未解鎖：')+L.name);
+      if(open)b.addEventListener('click',()=>startLevel(i));else b.disabled=false;
+      box.appendChild(b);
+    });
+    tw.appendChild(fl);
+  });
+  const roof=document.createElement('div');roof.className='roof';tw.appendChild(roof);
+  $('teacherBtn').classList.toggle('on',T);
+  $('teacherBtn').textContent=T?'老師模式：已解鎖全部關卡':'老師模式：解鎖全部關卡';
+  show('map');
+  const now=tw.querySelector('.tile.now');
+  if(now)requestAnimationFrame(()=>now.scrollIntoView({block:'center'}));
+}
+
+// ---------- 闖關 ----------
+let S=null;
+function startLevel(i){
+  const L=LEVELS[i];
+  S={i,L,correct:0,mistakes:0,streak:0,wrongRun:0,seen:new Set(),q:null,input:'',busy:false,last:'',mi:0};
+  $('lvName').textContent=L.mystery?'迷霧區・'+L.name:'第 '+(i+1)+' 關・'+L.name;
+  S.total=L.mystery?MYST[L.id].qs.length:GOAL;
+  updDots(0);show('play');
+  sfx.start();banner(L.mystery?'迷霧區':'第 '+(i+1)+' 關',L.name);
+  next();
+}
+function updDots(n){$('progFill').style.width=(n/S.total*100)+'%';$('progTxt').textContent=n+' / '+S.total;}
+function next(){
+  closeSheet();
+  const L=S.L;let q;
+  if(L.mystery){
+    const M=MYST[L.id];
+    if(S.mi>=M.qs.length)return mysteryEnd();
+    q={kind:'input',ask:'試試看，這題你會嗎？',...M.qs[S.mi],frac:!!M.frac,mystery:true};
+    updDots(S.mi);
+  }else{
+    if(S.correct>=GOAL)return finish();
+    let t=S.correct<3?0:S.correct<6?1:2;
+    if(S.wrongRun>=2)t=Math.max(0,t-1);
+    q=pickFresh(L.gen,t,S.seen);
+    updDots(S.correct);
+  }
+  S.q=q;S.last=q.html;S.input='';S.busy=false;S.hinted=false;
+  $('ask').textContent=q.ask;
+  const ex=$('expr');
+  ex.innerHTML=q.html.replace(SLOT,'<span class="slot empty" id="slot">?</span>');
+  ex.classList.toggle('long',ex.textContent.length>16);
+  $('hint').hidden=true;
+  const hb=$('hintBtn');hb.hidden=!q.hint;hb.textContent=S.L.floor>=2?'提示':'展開看看';
+  renderAnswer();
+}
+function renderAnswer(){
+  const q=S.q,A=$('answer');
+  if(q.kind==='choice'){
+    A.innerHTML='<div class="choices">'+q.choices.map((c,k)=>`<button class="choice" type="button" data-k="${k}">${c.html}</button>`).join('')+'</div>';
+    A.querySelectorAll('.choice').forEach(b=>b.addEventListener('click',()=>choose(+b.dataset.k)));
+  }else{
+    const keys=['1','2','3','4','5','6','7','8','9','−','0','⌫'];
+    let h='<div class="pad">'+keys.map(k=>`<button class="key" type="button" data-key="${k}" aria-label="${k==='⌫'?'刪除':k==='−'?'負號':k}">${k}</button>`).join('');
+    if(q.frac)h+=`<button class="key" type="button" data-key=".">.</button><button class="key wide" type="button" data-key="/">/（分數線）</button>`;
+    h+=q.mystery?'<button class="giveup" type="button" id="giveup">我不會</button><button class="go half" type="button" id="go">確認</button>':'<button class="go" type="button" id="go">確認</button>';
+    A.innerHTML=h+'</div>';
+    A.querySelectorAll('.key').forEach(b=>b.addEventListener('click',()=>press(b.dataset.key)));
+    $('go').addEventListener('click',submit);
+    if(q.mystery)$('giveup').addEventListener('click',()=>mysteryFeedback(false));
+  }
+}
+function press(k){
+  if(S.busy)return;
+  sfx.tap();
+  let s=S.input;
+  if(k==='⌫')s=s.slice(0,-1);
+  else if(k==='−')s=s.startsWith('−')?s.slice(1):'−'+s;
+  else if(s.replace('−','').length<9)s+=k;
+  S.input=s;
+  const el=$('slot');el.className='slot'+(s?'':' empty');el.textContent=s||'?';
+}
+const norm=s=>s.replace(/−/g,'-').replace(/[,\s]/g,'');
+function submit(){
+  if(S.busy||!S.input||S.input==='−')return;
+  const v=norm(S.input);const ok=S.q.answers.includes(v);
+  if(S.q.mystery)return mysteryFeedback(ok);
+  S.busy=true;
+  const el=$('slot');el.classList.add(ok?'ok':'no');
+  ok?right():wrong(S.q.diagnose?S.q.diagnose(v):'');
+}
+function choose(k){
+  if(S.busy)return;S.busy=true;
+  const c=S.q.choices[k];const bs_=$('answer').querySelectorAll('.choice');
+  bs_.forEach((b,j)=>{b.disabled=true;if(S.q.choices[j].ok)b.classList.add('ok');});
+  if(c.ok)right();else{bs_[k].classList.add('no');wrong(c.note);}
+}
+function right(){
+  S.correct++;S.streak++;S.wrongRun=0;updDots(S.correct);
+  const st=$('status');
+  st.innerHTML=S.streak>=3?`<span class="combo">COMBO ×${S.streak}</span>`:`<span class="combo good">${pick(['答對了！','漂亮！','沒錯！','好樣的！'])}</span>`;
+  sfx.right(S.streak);if(S.streak>=3)sfx.combo(S.streak);
+  fxCard('bump');if(S.streak>=3)burst(28,window.innerHeight*0.35);
+  setTimeout(next,S.q.kind==='choice'?650:750);
+}
+function wrong(note){
+  S.mistakes++;S.streak=0;S.wrongRun++;$('status').textContent='';
+  sfx.wrong();fxCard('shake');
+  const sh=$('sheet');sh.className='sheet';
+  sh.innerHTML=`<h3>再看一次</h3>${note?`<p class="note">${note}</p>`:''}<p class="exp">${S.q.explain}</p><p class="ans">答案：<b>${S.q.display}</b></p><button class="btn" type="button" id="goon">懂了，下一題</button>`;
+  setTimeout(()=>{sh.classList.add('on');$('goon').focus();},S.q.kind==='choice'?450:350);
+  $('goon').addEventListener('click',next);
+}
+function mysteryFeedback(ok){
+  S.busy=true;
+  const M=MYST[S.L.id];const last=S.mi===M.qs.length-1;
+  if(S.input){const el=$('slot');if(el)el.classList.add(ok?'ok':'no');}
+  S.mi++;updDots(S.mi);sfx.mystery();
+  const sh=$('sheet');sh.className='sheet mystery';
+  sh.innerHTML=`<h3>${ok?'咦，你猜到了？':'卡住了，這很正常'}</h3><p class="exp">${ok?M.right:M.wrong}</p><p class="ans">這一關要用新的規則才能真正解開。下一張學習單揭曉。</p><button class="btn" type="button" id="goon">${last?'看看迷霧區':'下一題'}</button>`;
+  setTimeout(()=>sh.classList.add('on'),300);
+  $('goon').addEventListener('click',next);
+}
+function closeSheet(){$('sheet').classList.remove('on');$('status').textContent='';}
+function finish(){
+  const stars=S.mistakes===0?3:S.mistakes<=2?2:1;
+  const pr=P[S.L.id]||{};P[S.L.id]={done:true,stars:Math.max(stars,pr.stars||0)};save();
+  const nxt=S.i+1<LEVELS.length?LEVELS[S.i+1]:null;
+  const opensMist=S.L.id==='L11';
+  const D=$('done');
+  D.innerHTML=`<h2>過關！</h2><div class="bigstars">${[0,1,2].map(k=>`<span class="${k<stars?'on':''}" style="animation-delay:${0.35+k*0.3}s">★</span>`).join('')}</div>
+    <p>答對 ${GOAL} 題，錯 ${S.mistakes} 次。${stars<3?'想拿三顆星可以重打這一關。':''}${opensMist?'<br><b style="color:var(--amber)">頂樓的迷霧區打開了。</b>':''}</p>
+    <div class="row">${nxt?`<button class="pill" type="button" id="nx">${opensMist?'去迷霧區':'下一關：'+nxt.name}</button>`:''}<button class="pill alt" type="button" id="again">重打這關</button><button class="pill alt" type="button" id="tomap">回地圖</button></div>`;
+  show('done');
+  sfx.clear();burst(140);for(let k=0;k<stars;k++)setTimeout(()=>sfx.star(k),350+k*300+150);
+  if(nxt)$('nx').addEventListener('click',()=>startLevel(S.i+1));
+  $('again').addEventListener('click',()=>startLevel(S.i));
+  $('tomap').addEventListener('click',renderMap);
+}
+function mysteryEnd(){
+  P[S.L.id]={explored:true};save();
+  const D=$('done');
+  const items=LEVELS.filter(L=>L.mystery).map(L=>`<li>${P[L.id]&&P[L.id].explored?'✓':'・'} ${L.name}　<span class="math">${L.ex}</span></li>`).join('');
+  const nxt=LEVELS.slice(S.i+1).find(L=>L.mystery&&!(P[L.id]&&P[L.id].explored));
+  D.innerHTML=`<h2>地圖的盡頭</h2><p>用現在學過的規則，這四關都解不開。<br>下一張學習單會用一張「往下走的表」，把它們一個一個破解。</p>
+    <ul class="mistlist">${items}</ul>
+    <div class="row">${nxt?`<button class="pill" type="button" id="nx">探索：${nxt.name}</button>`:''}<button class="pill alt" type="button" id="tomap">回地圖</button></div>`;
+  show('done');sfx.mystery();
+  if(nxt)$('nx').addEventListener('click',()=>startLevel(LEVELS.indexOf(nxt)));
+  $('tomap').addEventListener('click',renderMap);
+}
+
+$('hintBtn').addEventListener('click',()=>{sfx.hint();const h=$('hint');h.innerHTML=S.q.hint;h.hidden=false;$('hintBtn').hidden=true;});
+$('backBtn').addEventListener('click',()=>{closeSheet();renderMap();});
+$('teacherBtn').addEventListener('click',()=>{T=!T;save();renderMap();});
+let resetArm=false;
+$('resetBtn').addEventListener('click',()=>{
+  const b=$('resetBtn');
+  if(!resetArm){resetArm=true;b.textContent='再按一次，清除全部進度';b.classList.add('on');setTimeout(()=>{resetArm=false;b.textContent='重設進度';b.classList.remove('on');},3000);return;}
+  resetArm=false;P={};T=false;save();b.textContent='重設進度';b.classList.remove('on');renderMap();
+});
+document.addEventListener('keydown',e=>{
+  if(!S||!$('play').classList.contains('on'))return;
+  if($('sheet').classList.contains('on')){if(e.key==='Enter'){e.preventDefault();$('goon')&&$('goon').click();}return;}
+  if(S.q.kind==='choice'){const n=+e.key;if(n>=1&&n<=4)choose(n-1);return;}
+  if(/^[0-9]$/.test(e.key))press(e.key);
+  else if(e.key==='-')press('−');
+  else if(e.key==='Backspace')press('⌫');
+  else if(e.key==='Enter')submit();
+  else if(S.q.frac&&(e.key==='.'||e.key==='/'))press(e.key);
+});
+
+function boot(d){
+  load();
+  if(d&&d.p){P=d.p;T=!!d.t;}
+  syncSound();renderMap();
+}
+window.claude?.hot?.snapshot?.(()=>({p:P,t:T}));
+window.claude?.hot?.ready?window.claude.hot.ready(boot):boot(window.claude?.hot?.data??{});
+</script>
+</body>
+</html>
